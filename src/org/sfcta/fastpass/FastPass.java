@@ -38,8 +38,8 @@ public class FastPass {
     
 	public static String[] mTimePeriods = {"am","md","pm","ev","ea"};  
 	public static String[] mPaths = 
-		{"nsatw","nswta","nswtw","sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
-//		{"sfwlw","nswtw"};
+//		{"nsatw","nswta","nswtw","sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
+		{"sfwlw","nswtw"};
 
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
@@ -208,10 +208,15 @@ public class FastPass {
     
 
     StringBuffer reportLineLevelResults() {
-        Iterator lines = mLineInterest.values().iterator();
         StringBuffer sb = new StringBuffer();
-        while (lines.hasNext()) {
-            TransitLine trLine = (TransitLine) lines.next();
+
+        // Sort the lines
+        Vector c = new Vector(mLineInterest.values());
+        Collections.sort(c);
+        Enumeration lines = c.elements();
+
+        while (lines.hasMoreElements()) {
+            TransitLine trLine = (TransitLine) lines.nextElement();
             sb.append(trLine.reportStations());
         }
         return sb;
@@ -225,6 +230,30 @@ public class FastPass {
         return (sb.toString());
     }
 
-    
+    /**
+     * Split line name into sections by text/numerical divisions. 
+     * @return Array of text chunks that comprise this line name.
+     */
+    public static Vector getNameChunks(String name) {
+        Vector mNameChunks = new Vector();
+        StringBuffer chunk = new StringBuffer();
+        chunk.append(name.charAt(0));
+        boolean isDigit = Character.isDigit(name.charAt(0));
+
+        for (int i = 1; i<name.length(); i++) {
+            char z = name.charAt(i);
+            if (Character.isDigit(z) == isDigit) {
+                chunk.append(z);
+            } else {
+                mNameChunks.add(chunk.toString());
+                isDigit = Character.isDigit(z);
+                chunk = new StringBuffer();
+                chunk.append(z);
+            }
+        }
+        mNameChunks.add(chunk.toString());
+            
+        return mNameChunks;
+    }
 }
 

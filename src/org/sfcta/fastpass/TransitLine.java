@@ -13,10 +13,12 @@ import java.util.*;
  *
  * (c) 2004 San Francisco County Transportation Authority.
  */
-public class TransitLine {
+public class TransitLine implements Comparable {
 
     static int PERIODS = 5;
     String name = "";
+    Vector nameChunks = null;
+    
     Hashtable[] links = new Hashtable[PERIODS];
     static String[] label = {"AM","MD","PM","EV","EA"};
            
@@ -25,6 +27,7 @@ public class TransitLine {
      */
     public TransitLine(String name) {
         this.name = name;
+        nameChunks = FastPass.getNameChunks(name);
     }
 
     
@@ -64,7 +67,38 @@ public class TransitLine {
         
     }
 
+    /** 
+     * Helper function to sort transit lines. Transit line names 
+     * are divided into text and numerical portions so they sort 
+     * in a more natural order.
+     *  
+     * @return -1,0, or 1 depending on sort order.
+     */
+    public int compareTo(Object o) {
+        Vector compChunks = ((TransitLine)o).nameChunks;
+        int c = 0;
 
+        try {
+            //Compare each chunk individually.
+            for (int i = 0; i< nameChunks.size(); i++) {
+                c = ((String)nameChunks.elementAt(i)).
+                	compareTo(compChunks.elementAt(i));
+                if (c!=0)
+                    break;
+            }
+        } catch (RuntimeException e) {
+            // Compared line has fewer name chunks.
+            return 1;
+        }
+
+        // Loop ends if this line has fewer name chunks.
+        if (c==0) {
+            c = -1;
+        }
+
+        return c; 
+    }
+    
     /**
      * Summarize and report the boardings, alightings, and volumes of this
      * transit line, by station.

@@ -51,6 +51,7 @@ public class TransitStop {
     }
 
     public StringBuffer reportStations() {
+        
         StringBuffer sb = new StringBuffer();
         
         sb.append("------------------------------------------------------------------------------------\r\n");
@@ -60,9 +61,15 @@ public class TransitStop {
         // Show the total first
         sb.append(punchRiders((LineStop)lines.get(TOTAL)));
         sb.append("------------ ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----\r\n");
-        Iterator it = lines.values().iterator();
-        while (it.hasNext()) {
-            LineStop line = (LineStop) it.next();
+
+        // Sort the lines
+        Vector c = new Vector(lines.values());
+        Collections.sort(c);
+        Enumeration enum = c.elements();
+
+        // Print the lines out
+        while (enum.hasMoreElements()) {
+            LineStop line = (LineStop) enum.nextElement();
             if (line.name == TOTAL)
                 continue;
             sb.append(punchRiders(line));
@@ -85,15 +92,48 @@ public class TransitStop {
     }
 
     
-	class LineStop {
+	class LineStop implements Comparable {
+	    Vector nameChunks = null;
 	    public String name;
 	    public long riders[] = {0,0,0,0,0,0,0,0,0,0,0,0};
 	
 	    public LineStop(String name) {
 	        this.name = name;
+	        nameChunks = FastPass.getNameChunks(name);
+	    }
+	    
+	    /** 
+	     * Used to sort transit lines. Transit line names are divided
+	     * into text and numerical portions so they sort in a more natural
+	     * order.
+	     *  
+	     * @return -1,0, or 1 depending on sort order.
+	     */
+	    public int compareTo(Object o) {
+	        Vector compChunks = ((LineStop)o).nameChunks;
+	        int c = 0;
+
+	        try {
+	            //Compare each chunk individually.
+	            for (int i = 0; i< nameChunks.size(); i++) {
+	                c = ((String)nameChunks.elementAt(i)).
+	                	compareTo(((String)compChunks.elementAt(i)));
+	                if (c!=0)
+	                    break;
+	            }
+	        } catch (RuntimeException e) {
+	            // Compared line has fewer name chunks than we do.
+	            return 1;
+	        }
+
+	        // This line has fewer name chunks.
+	        if (c==0) {
+	            c = -1;
+	        }
+	        return c; 
 	    }
 	}
-
+	
 	String ralign(int value, int width) {
 	    if (value==0) {
 	        return (ralign(" ",width));
@@ -123,6 +163,5 @@ public class TransitStop {
         while (--padding >= 0) sb.append(" ");
         return (sb.toString());
     }
-
 }
 
