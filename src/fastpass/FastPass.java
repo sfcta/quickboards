@@ -25,7 +25,7 @@ public class FastPass {
 	public static int A = 0;
 	public 	static int B = 1;
 	public 	static int TIME = 2;
-	public 	static int MODE = 3;
+	public 	static  int MODE = 3;
 	public 	static int PLOT = 4;
 	public 	static int COLOR = 5;
 	public 	static int STOP_A = 6;
@@ -50,6 +50,7 @@ public class FastPass {
     Hashtable mSummaryInterest = new Hashtable();
     String mSelectedTimePeriods = "";
     String mOutFile = "fastpass.xls";
+	String mNodesFile = null;
     boolean mPrepareSummary = true;
     WritableWorkbook wb = null;
     static Hashtable mNodeLookup;
@@ -57,7 +58,14 @@ public class FastPass {
     public static void main(String[] args) {
         System.err.println("\nSFCTA FastPass:    Transit Assignment Summary Tool");
         if (args.length == 0) {
-            System.err.println("Usage:\nfastpass  ctlfile  [outfile]\n\n");
+            System.err.println("Usage:\nfastpass  ctlfile  [outfile]\n");
+            System.err.println("Control file keywords:\n");
+            System.err.println("NodesFile=[c:\\javalibs\\nodes.xls] path of nodes.xls equivalency file");
+            System.err.println("TimePeriods=[am,md,pm,ev,ea] list of time periods to analyze");
+            System.err.println("LineStats=[t] true/false to create summary stats for all lines");
+            System.err.println("Lines=[] csv list of TP+ line names for station-level boardings");
+            System.err.println("Stations=[] csv list of TP+ nodes for detailed boardings by line\n");
+            
             System.exit(8);
         }
 
@@ -81,6 +89,8 @@ public class FastPass {
             String stations = ctlFile.getProperty("Stations","");
             if (!"".equals(stations))
                 prepareStationLevelBoardings(stations);
+
+            mNodesFile = ctlFile.getProperty("NodesFile","c:\\javalibs\\nodes.xls");
 
             String summary = ctlFile.getProperty("Summary","");
             if (!"".equals(summary))
@@ -108,7 +118,7 @@ public class FastPass {
 
         try {
                 System.err.print("Reading node equivalency: ");
-                nlookup = Workbook.getWorkbook(new File("nodes.xls"));
+                nlookup = Workbook.getWorkbook(new File(mNodesFile));
                 Sheet sheet = nlookup.getSheet(0);
 
                 // Now read cells until we hit the end.
