@@ -53,12 +53,13 @@ public class TransitStop {
     public StringBuffer reportStations() {
         StringBuffer sb = new StringBuffer();
         
-        sb.append("Sta "+node+":       DAILY        AM          MD          PM          EV          EA\n");
-        sb.append("               BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT\n");
+        sb.append("------------------------------------------------------------------------------------\r\n");
+        sb.append("Sta "+node+":       DAILY        AM          MD          PM          EV          EA\r\n");
+        sb.append("               BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT\r\n");
 
         // Show the total first
         sb.append(punchRiders((LineStop)lines.get(TOTAL)));
-        sb.append("------------ ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----\n");
+        sb.append("------------ ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----\r\n");
         Iterator it = lines.values().iterator();
         while (it.hasNext()) {
             LineStop line = (LineStop) it.next();
@@ -67,7 +68,7 @@ public class TransitStop {
             sb.append(punchRiders(line));
         }
 
-        sb.append("------------ ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----\n");
+        sb.append("\r\n\r\n\r\n");
         return sb;
     }
 
@@ -79,7 +80,7 @@ public class TransitStop {
             sb.append(ralign(line.riders[i*2],6));
             sb.append(ralign(line.riders[1+i*2],6));
         }
-        sb.append("\n");
+        sb.append("\r\n");
         return sb;
     }
 

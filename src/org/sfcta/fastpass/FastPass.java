@@ -7,6 +7,8 @@
 package org.sfcta.fastpass;
 
 import java.util.*;
+import java.io.*;
+
 import com.pb.common.util.AppProperties;
 import com.svcon.jdbf.*;
 
@@ -36,9 +38,9 @@ public class FastPass {
 	public 	static int XITB = 16;
     
 	public static String[] mTimePeriods = {"am","md","pm","ev","ea"};  
-	public static String[] mPaths = {"nsatw","nswta","nswtw",
-	        					"sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
-//		{"sfwlw","nswtw"};
+	public static String[] mPaths = //{"nsatw","nswta","nswtw",
+//	        					"sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
+		{"sfwlw","nswtw"};
 
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
@@ -170,29 +172,42 @@ public class FastPass {
      */
     void results() {
         System.out.println("\n");
-        
-        reportStationLevelResults();
-        reportLineLevelResults();
-        
+        StringBuffer sb;
+        PrintWriter pw = null;
+        try {
+            pw = new PrintWriter (
+                    		 new BufferedWriter (
+                    		 new FileWriter("fastpass.rpt")));
+            
+            sb = reportStationLevelResults();
+            pw.println(sb);
+
+            sb = reportLineLevelResults();
+            pw.println(sb);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    void reportStationLevelResults() {
+    StringBuffer reportStationLevelResults() {
         Iterator stations = mStationInterest.values().iterator();
+        StringBuffer sb = new StringBuffer();
         while (stations.hasNext()) {
             TransitStop trStop = (TransitStop) stations.next();
-            StringBuffer sb = trStop.reportStations();
-            System.out.println(sb);
+            sb.append(trStop.reportStations());
         }
+        return sb;
     }
     
 
-    void reportLineLevelResults() {
+    StringBuffer reportLineLevelResults() {
         Iterator lines = mLineInterest.values().iterator();
+        StringBuffer sb = new StringBuffer();
         while (lines.hasNext()) {
             TransitLine trLine = (TransitLine) lines.next();
-            StringBuffer sb = trLine.reportStations();
-            System.out.println(sb);
+            sb.append(trLine.reportStations());
         }
+        return sb;
     }
 
     String ralign(String text, int width) {

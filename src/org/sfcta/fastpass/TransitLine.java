@@ -65,6 +65,7 @@ public class TransitLine {
         
     }
 
+
     /**
      * Summarize and report the boardings, alightings, and volumes of this
      * transit line, by station.
@@ -73,6 +74,7 @@ public class TransitLine {
      */
     StringBuffer reportStations() {
         StringBuffer sb = new StringBuffer();
+        StationList list = new StationList();
         
         // Loop for each time period
 
@@ -83,9 +85,6 @@ public class TransitLine {
                 continue;
 
             // Loop for each link, in order, along the transit line
-            sb.append("\nLine: "+name+"   Period: "+label[pd]+"\n");
-            sb.append(" STOP   BOARD  ALIGHT     VOL\n");
-
             TransitLink link = null;
             int seq = 0;
             
@@ -94,26 +93,31 @@ public class TransitLine {
                 link = (TransitLink) links[pd].get(new Long(seq));
 
                 if (link == null) {
-                    System.out.println("ERROR: Network Problem with: "+name+" "+label[pd]+" seq: "+seq);
+                    System.err.println("ERROR: Network Problem with: "+name+" "+label[pd]+" seq: "+seq);
                     continue;
                 }
-                
+
                 if (link.stopa == 1) {
-                    sb.append(""+ralign(link.a,5)+ralign(link.brda,8)+ralign(link.xita,8)
-                            + ralign(link.vol,8) + "\n");
+                    list.addStation(link.a, pd, link.brda, link.xita, link.vol);
                 }
             }
 
-            // Now do final stop
+            // Now do final stop, which uses BNODE instead of ANODE.
             link = (TransitLink) links[pd].get(new Long(seq-1));
 
             if (link == null) {
-                System.out.println("ERROR: Network Problem with: "+name+" "+label[pd]+" seq: "+seq);
+                System.err.println("ERROR: Network Problem with: "+name+" "+label[pd]+" seq: "+seq);
             } else {
-                sb.append(""+ralign(link.b,5)+ralign(link.brdb,8)+ralign(link.xitb,8) + "\n");
+                list.addStation(link.b, pd, link.brdb, link.xitb, 0);
             }
-            
+
         }
+        // And now print it all out
+        sb.append("\r\nLine: "+name+"   Period: \r\n");
+        sb.append("        DAILY----------------   AM-------------------   MD-------------------   PM-------------------   EV-------------------   EA-------------------\r\n");
+        sb.append(" STA    BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL\r\n");
+        sb.append(list.toString());
+        
         return sb;
     }
 
@@ -139,4 +143,58 @@ public class TransitLine {
         return (sb.toString());
     }
 
+    class StationList {
+        Hashtable staLookup = new Hashtable();
+        LinkedList listOfStations = new LinkedList();
+
+        void addStation(String node, int period, long brd, long xit, long vol) {
+
+            StationData sd = (StationData) staLookup.get(node);
+            if (null == sd) {
+                sd = new StationData(node);
+                staLookup.put(node, sd);
+                listOfStations.add(sd);
+            }
+
+            sd.addVolumes(period, brd, xit, vol);
+        }
+
+        public String toString() {
+            StringBuffer sb = new StringBuffer();
+            Iterator i = listOfStations.iterator();
+            while (i.hasNext()) {
+                sb.append(""+i.next());
+            }
+            return sb.toString();
+        }
+    }
+
+    class StationData {
+        String name;
+        long[] j = {0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0};
+
+        public StationData(String s) {
+            name = s;
+        }
+
+        void addVolumes (int period, long brd, long xit, long vol) {
+            j[0] += brd;
+            j[1] += xit;
+            j[2] += vol;
+            
+            j[3+period*3] += brd;
+            j[4+period*3] += xit;
+            j[5+period*3] += vol;
+        }
+        public String toString() {
+            StringBuffer sb = new StringBuffer(ralign(name,5));
+
+            for (int i = 0; i < 18; i++) {
+                sb.append(ralign(j[i],8));
+            }
+
+            sb.append("\r\n");
+            return sb.toString();
+        }
+    }
 }
