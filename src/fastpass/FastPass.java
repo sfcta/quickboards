@@ -171,9 +171,15 @@ public class FastPass {
           if (-1 == mSelectedTimePeriods.indexOf(mTimePeriods[period]))
                 continue;
 
+          // Figure out file path
+          File x = new File (mOutFile);
+          String parentDir = x.getAbsoluteFile().getParent();
+          
+          // Loop on each DBF file 
           for (int path = 0; path < mPaths.length; path++) {
 
-            String dbfFile = mPaths[path]+mTimePeriods[period]+".dbf";
+            String dbfFile = parentDir + File.separator + 
+            	mPaths[path] + mTimePeriods[period]+".dbf";
             DBFReader dbf = null;
             
             try {
