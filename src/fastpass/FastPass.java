@@ -7,6 +7,8 @@
 package fastpass;
 
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.io.*;
 
 
@@ -48,6 +50,7 @@ public class FastPass {
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
     Hashtable mSummaryInterest = new Hashtable();
+    Vector mLinePatterns = new Vector();
     String mSelectedTimePeriods = "";
     String mOutFile = "fastpass.xls";
 	String mNodesFile = null;
@@ -164,9 +167,18 @@ public class FastPass {
         StringTokenizer st = new StringTokenizer(lines,";,\t ");
         while (st.hasMoreTokens()) {
             String trnLine = st.nextToken();
-            mLineInterest.put(trnLine,new TransitLine(trnLine));
+
+            // This cruft just converts asterisks into regex patterns.
+            // I hate regex patterns. 
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < trnLine.length(); i++) {
+                char c = trnLine.charAt(i);
+                sb.append(c=='*' ? ".*" : ""+c); 
+            }
+            mLinePatterns.add(Pattern.compile(""+sb));
         }
-    }
+     }
+            
 
     /**
      * Read the required DBF files and populate the data vectors.
@@ -202,9 +214,8 @@ public class FastPass {
                     long seq = ((Long)fields[SEQ]).longValue();
                     
                     // Sequence "0" records are zone-centroids; skip.
-                    if (0 == seq) {
+                    if (0 == seq)
                         continue;
-                    }
 
                     // Check station interest.
                     // If first link in a sequence, check its ANODE.
@@ -224,8 +235,20 @@ public class FastPass {
                     // Check for line interest
                     String name = fields[NAME].toString();
                     TransitLine line = (TransitLine) mLineInterest.get(name);
-
                     TransitLink link = null;
+
+                    // Newfangled code to allow wildcards...
+                    if (line == null) {
+                        for (int i=0; i<mLinePatterns.size(); i++) {
+                            Pattern p = (Pattern) mLinePatterns.elementAt(i);
+                            Matcher m = p.matcher(name);
+                            if (m.matches()) {
+                                line = new TransitLine(name);
+                                mLineInterest.put(name, line);
+                                break;
+                            }
+                        }
+                    }
                     
                     if (line != null) {
                         link = new TransitLink(fields);
