@@ -67,6 +67,52 @@ public class TransitLine implements Comparable {
         
     }
 
+    int mBoards[] = {0,0,0,0,0,0};
+    double mPassMiles[] = {0,0,0,0,0,0};
+    double mPassHours[] = {0,0,0,0,0,0};
+    
+    /**
+     * Accumulate summary info for this link
+     * @param link
+     * @param period
+     */
+    void addSummary(TransitLink link, int period) {
+
+        // incr period since daily is at position 0.
+        period++;
+
+        if (link.seq.intValue()==1 && link.stopa==1) {
+            mBoards[period] += link.brda;
+            mBoards[0] += link.brda;
+        }
+        
+        if (link.stopb==1) {
+            mBoards[period] += link.brdb;
+        	mBoards[0] += link.brdb;
+        }
+        
+        mPassMiles[period] += 0.1 * (link.vol * link.dist);
+        mPassHours[period] += 0.1 / 60.0 * (link.vol * link.time);
+
+        mPassMiles[0] += 0.1 * (link.vol * link.dist);
+        mPassHours[0] += 0.1 / 60.0 * (link.vol * link.time);
+
+    }
+
+    StringBuffer reportSummary() {
+        StringBuffer sb = new StringBuffer();
+        
+        sb.append(lalign(name,13));
+        
+        for (int i = 0; i<=PERIODS; i++) {
+            sb.append(ralign(mBoards[i],8) +
+                      ralign((int)mPassMiles[i],8) +
+                      ralign((int)mPassHours[i],8));
+        }
+    	sb.append("\r\n");
+        return sb;
+    }
+    
     /** 
      * Helper function to sort transit lines. Transit line names 
      * are divided into text and numerical portions so they sort 
@@ -78,17 +124,40 @@ public class TransitLine implements Comparable {
         Vector compChunks = ((TransitLine)o).nameChunks;
         int c = 0;
 
-        try {
-            //Compare each chunk individually.
-            for (int i = 0; i< nameChunks.size(); i++) {
-                c = ((String)nameChunks.elementAt(i)).
-                	compareTo(compChunks.elementAt(i));
-                if (c!=0)
-                    break;
+        //Compare each chunk individually.
+        for (int i = 0; i< nameChunks.size(); i++) {
+
+            // Check if compared line has fewer name chunks.
+            if (i >= compChunks.size())
+                return 1;
+
+            String mine = ((String)nameChunks.elementAt(i));
+            String theirs = ((String)compChunks.elementAt(i)); 
+
+            int myvalue = -1;
+            int theirvalue = -1;
+
+            try {
+                myvalue = Integer.parseInt(mine);
+            } catch (NumberFormatException nfe) {}
+            try {
+                theirvalue = Integer.parseInt(theirs);
+            } catch (NumberFormatException nfe) {}
+
+            // Compare numbers
+            if (myvalue >0 && theirvalue > 0) {
+                if (myvalue == theirvalue) 
+                    continue;
+                return (myvalue > theirvalue ? 1 : -1);
             }
-        } catch (RuntimeException e) {
-            // Compared line has fewer name chunks.
-            return 1;
+
+            // Compare text
+            c = mine.compareTo(theirs);
+            if (c!=0)
+                return c;
+            
+            // Go back and check the next chunk since the compare 
+            // says these chunks are equivalent.
         }
 
         // Loop ends if this line has fewer name chunks.
@@ -229,5 +298,13 @@ public class TransitLine implements Comparable {
             sb.append("\r\n");
             return sb.toString();
         }
+    }
+
+    String lalign(String text, int width) {
+        StringBuffer sb = new StringBuffer();
+        int padding = width - text.length();
+        sb.append(text);
+        while (--padding >= 0) sb.append(" ");
+        return (sb.toString());
     }
 }

@@ -43,8 +43,10 @@ public class FastPass {
 
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
+    Hashtable mSummaryInterest = new Hashtable();
     String mSelectedTimePeriods = "";
     String mOutFile = "fastpass.rpt";
+    boolean mPrepareSummary = true;
     
     public static void main(String[] args) {
         System.err.println("SFCTA FastPass:    Transit Assignment Summary Tool");
@@ -74,7 +76,12 @@ public class FastPass {
             if (!"".equals(stations))
                 prepareStationLevelBoardings(stations);
 
+            String summary = ctlFile.getProperty("Summary","");
+            if (!"".equals(summary))
+                mPrepareSummary = true;
+
             mSelectedTimePeriods = ctlFile.getProperty("TimePeriods","am,md,pm,ev,ea");
+
         } catch (Exception e) {System.exit(8);}
 
         readDBFs();
@@ -160,10 +167,27 @@ public class FastPass {
                     String name = fields[NAME].toString();
                     TransitLine line = (TransitLine) mLineInterest.get(name);
 
+                    TransitLink link = null;
+                    
                     if (line != null) {
-                      line.addLink(new TransitLink(fields),period);
+                        link = new TransitLink(fields);
+                        line.addLink(link, period);
                     }
 
+                    // Accumulate summary stats
+                    if (mPrepareSummary) {
+                        TransitLine sumLine = (TransitLine) mSummaryInterest.get(name);
+
+                        if (null == sumLine) {
+                            sumLine = new TransitLine(name);
+                            mSummaryInterest.put(name,sumLine);
+                        }
+                        
+                        if (null == link) {
+                            link = new TransitLink(fields);
+                        }
+                        sumLine.addSummary(link,period);
+                    }
                 }
                 dbf.close();
                 dbf = null;
@@ -189,7 +213,11 @@ public class FastPass {
             pw.println(sb);
 
             sb = reportLineLevelResults();
-            pw.println(sb);
+            pw.println("\f"+sb);
+            
+            sb = reportSummaryResults();
+            pw.println("\f"+sb);
+            
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -206,10 +234,28 @@ public class FastPass {
         return sb;
     }
     
+    StringBuffer reportSummaryResults() {
+        StringBuffer sb = new StringBuffer();
+
+        sb.append("Overall Line Summary\r\n");
+        sb.append("                DAILY----------------   AM-------------------   MD-------------------   PM-------------------   EV-------------------   EA-------------------\r\n");
+        sb.append("Line Name       BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr\r\n");
+
+        // Sort the lines
+        Vector c = new Vector(mSummaryInterest.values());
+        Collections.sort(c);
+        Enumeration lines = c.elements();
+
+        while (lines.hasMoreElements()) {
+            TransitLine trLine = (TransitLine) lines.nextElement();
+            sb.append(trLine.reportSummary());
+        }
+        return sb;
+    }
+    
 
     StringBuffer reportLineLevelResults() {
         StringBuffer sb = new StringBuffer();
-
         // Sort the lines
         Vector c = new Vector(mLineInterest.values());
         Collections.sort(c);
