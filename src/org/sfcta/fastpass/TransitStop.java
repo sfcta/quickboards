@@ -135,9 +135,9 @@ public class TransitStop {
 	    }
 	    
 	    /** 
-	     * Used to sort transit lines. Transit line names are divided
-	     * into text and numerical portions so they sort in a more natural
-	     * order.
+	     * Helper function to sort transit lines. Transit line names 
+	     * are divided into text and numerical portions so they sort 
+	     * in a more natural order.
 	     *  
 	     * @return -1,0, or 1 depending on sort order.
 	     */
@@ -145,55 +145,49 @@ public class TransitStop {
 	        Vector compChunks = ((LineStop)o).nameChunks;
 	        int c = 0;
 
-	        try {
-	            //Compare each chunk individually.
-	            for (int i = 0; i< nameChunks.size(); i++) {
-	                c = ((String)nameChunks.elementAt(i)).
-	                	compareTo(((String)compChunks.elementAt(i)));
-	                if (c!=0)
-	                    break;
+	        //Compare each chunk individually.
+	        for (int i = 0; i< nameChunks.size(); i++) {
+
+	            // Check if compared line has fewer name chunks.
+	            if (i >= compChunks.size())
+	                return 1;
+
+	            String mine = ((String)nameChunks.elementAt(i));
+	            String theirs = ((String)compChunks.elementAt(i)); 
+
+	            int myvalue = -1;
+	            int theirvalue = -1;
+
+	            try {
+	                myvalue = Integer.parseInt(mine);
+	            } catch (NumberFormatException nfe) {}
+	            try {
+	                theirvalue = Integer.parseInt(theirs);
+	            } catch (NumberFormatException nfe) {}
+
+	            // Compare numbers
+	            if (myvalue >0 && theirvalue > 0) {
+	                if (myvalue == theirvalue) 
+	                    continue;
+	                return (myvalue > theirvalue ? 1 : -1);
 	            }
-	        } catch (RuntimeException e) {
-	            // Compared line has fewer name chunks than we do.
-	            return 1;
+
+	            // Compare text
+	            c = mine.compareTo(theirs);
+	            if (c!=0)
+	                return c;
+	            
+	            // Go back and check the next chunk since the compare 
+	            // says these chunks are equivalent.
 	        }
 
-	        // This line has fewer name chunks.
+	        // Loop ends if this line has fewer name chunks.
 	        if (c==0) {
 	            c = -1;
 	        }
+
 	        return c; 
 	    }
 	}
-	
-	String ralign(int value, int width) {
-	    if (value==0) {
-	        return (ralign(" ",width));
-	    }
-	    return ralign(Integer.toString(value),width);
-    }
-
-    String ralign(long value, int width) {
-	    if (value==0) {
-	        return (ralign(" ",width));
-	    }
-        return ralign(Long.toString(value),width);
-    }
-
-    String ralign(String text, int width) {
-        StringBuffer sb = new StringBuffer();
-        int padding = width - text.length();
-        while (--padding >= 0) sb.append(" ");
-        sb.append(text);
-        return (sb.toString());
-    }
-
-    String lalign(String text, int width) {
-        StringBuffer sb = new StringBuffer();
-        int padding = width - text.length();
-        sb.append(text);
-        while (--padding >= 0) sb.append(" ");
-        return (sb.toString());
-    }
 }
 

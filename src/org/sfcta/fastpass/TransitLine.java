@@ -305,12 +305,4 @@ public class TransitLine implements Comparable {
             }
         }
     }
-
-    String lalign(String text, int width) {
-        StringBuffer sb = new StringBuffer();
-        int padding = width - text.length();
-        sb.append(text);
-        while (--padding >= 0) sb.append(" ");
-        return (sb.toString());
-    }
 }

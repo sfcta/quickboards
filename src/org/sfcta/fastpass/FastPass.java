@@ -289,14 +289,6 @@ public class FastPass {
 	    } catch (Exception e) {}
     }
 
-    String ralign(String text, int width) {
-        StringBuffer sb = new StringBuffer();
-        int padding = width - text.length();
-        while (--padding >= 0) sb.append(" ");
-        sb.append(text);
-        return (sb.toString());
-    }
-
     /**
      * Split line name into sections by text/numerical divisions. 
      * @return Array of text chunks that comprise this line name.
