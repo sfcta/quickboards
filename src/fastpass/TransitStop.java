@@ -4,12 +4,12 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package org.sfcta.fastpass;
+package fastpass;
 
 import java.util.*;
+
 import jxl.write.*;
 import jxl.write.Number;
-
 
 /**
  * @author tad

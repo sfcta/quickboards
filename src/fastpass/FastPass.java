@@ -4,10 +4,11 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package org.sfcta.fastpass;
+package fastpass;
 
 import java.util.*;
 import java.io.*;
+
 
 import com.pb.common.util.AppProperties;
 import com.svcon.jdbf.*;

@@ -4,7 +4,7 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package org.sfcta.fastpass;
+package fastpass;
 
 /**
  * @author tad
