@@ -38,16 +38,21 @@ public class FastPass {
 	public 	static int XITB = 16;
     
 	public static String[] mTimePeriods = {"am","md","pm","ev","ea"};  
-	public static String[] mPaths = //{"nsatw","nswta","nswtw",
-//	        					"sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
-		{"sfwlw","nswtw"};
+	public static String[] mPaths = 
+		{"nsatw","nswta","nswtw","sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
+//		{"sfwlw","nswtw"};
 
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
     String mSelectedTimePeriods = "";
+    String mOutFile = "fastpass.rpt";
     
     public static void main(String[] args) {
         System.err.println("SFCTA FastPass:    Transit Assignment Summary Tool");
+        if (args.length == 0) {
+            System.err.println("Usage:\nfastpass  ctlfile  [outfile]\n\n");
+            System.exit(8);
+        }
 
         new FastPass(args);
     }
@@ -59,6 +64,8 @@ public class FastPass {
         
         try {
             AppProperties ctlFile = new AppProperties(args[0]);
+            if (args.length > 1)
+                mOutFile = args[1];
 
             String lines = ctlFile.getProperty("Lines","");
             if (!"".equals(lines))
@@ -177,7 +184,7 @@ public class FastPass {
         try {
             pw = new PrintWriter (
                     		 new BufferedWriter (
-                    		 new FileWriter("fastpass.rpt")));
+                    		 new FileWriter(mOutFile)));
             
             sb = reportStationLevelResults();
             pw.println(sb);
@@ -187,6 +194,7 @@ public class FastPass {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        if (null != pw) pw.close();
     }
 
     StringBuffer reportStationLevelResults() {
