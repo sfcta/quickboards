@@ -8,7 +8,6 @@ package org.sfcta.fastpass;
 
 import java.util.*;
 import java.io.*;
-
 import com.pb.common.util.AppProperties;
 import com.svcon.jdbf.*;
 
