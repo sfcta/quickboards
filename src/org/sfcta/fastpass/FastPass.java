@@ -51,9 +51,10 @@ public class FastPass {
     String mOutFile = "fastpass.xls";
     boolean mPrepareSummary = true;
     WritableWorkbook wb = null;
+    static Hashtable mNodeLookup;
     
     public static void main(String[] args) {
-        System.err.println("SFCTA FastPass:    Transit Assignment Summary Tool");
+        System.err.println("\nSFCTA FastPass:    Transit Assignment Summary Tool");
         if (args.length == 0) {
             System.err.println("Usage:\nfastpass  ctlfile  [outfile]\n\n");
             System.exit(8);
@@ -88,7 +89,8 @@ public class FastPass {
 
             wb = Workbook.createWorkbook(new File(mOutFile));
 
-	        readDBFs();
+            mNodeLookup = populateNodeLookup();
+            readDBFs();
 	        results();
         } catch (IOException e) {
             System.err.println("Error writing output file; is it already open?");
@@ -97,6 +99,36 @@ public class FastPass {
         }
     }
 
+
+    Hashtable populateNodeLookup() {
+        Hashtable table = new Hashtable();
+        Workbook nlookup = null;
+        int i = 0;
+
+        try {
+                System.err.print("Reading node equivalency: ");
+                nlookup = Workbook.getWorkbook(new File("nodes.xls"));
+                Sheet sheet = nlookup.getSheet(0);
+
+                // Now read cells until we hit the end.
+                while (true) {
+                    String node = sheet.getCell(0,i).getContents();
+                    String value= sheet.getCell(1,i).getContents();
+//                    if (null == node || node.equals(""))
+//                        break;
+                    table.put(node,value);
+//                    System.out.println(node);
+                    i++;
+                }
+            } catch (IOException e) {
+                System.err.println("Couldn't open nodes.xls; be sure it exists in run directory");
+            } catch (Exception e) {
+                System.out.println(""+i+" node labels found.");
+                nlookup.close();
+            }
+        return table;
+    }
+    
     /**
      * Populate the list of stations we're interested in for the station
      * level analysis.
@@ -224,7 +256,7 @@ public class FastPass {
 	        Iterator stations = mStationInterest.values().iterator();
 	        while (stations.hasNext()) {
 	            TransitStop trStop = (TransitStop) stations.next();
-	            trStop.reportStations(sheet);
+	            trStop.reportStations(sheet, mNodeLookup);
 	        }
 	    } catch (Exception e) {}
     }
@@ -284,7 +316,7 @@ public class FastPass {
 
 	        while (lines.hasMoreElements()) {
 	            TransitLine trLine = (TransitLine) lines.nextElement();
-	            trLine.reportStations(sheet);
+	            trLine.reportStations(sheet, mNodeLookup);
 	        }
 	    } catch (Exception e) {}
     }

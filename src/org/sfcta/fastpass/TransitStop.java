@@ -54,15 +54,22 @@ public class TransitStop {
             addVol(TOTAL, period,brds,xits);
     }
 
-    public void reportStations(WritableSheet sheet) {
+    public void reportStations(WritableSheet sheet, Hashtable lookup) {
 		try {
             WritableCellFormat font =  new WritableCellFormat (new WritableFont(
             		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
            	sheet.addCell(new Label(0,0,"Station Report", font));
             
             lineCount+=2;
+
+            // Try to retrieve node name; just use node number if it 
+            // doesn't exist in database.
+            String textName = (String) lookup.get(node);
+            if (null == textName)
+                textName = "Station "+node;
+
             
-            sheet.addCell(new Label( 0,lineCount,"Station "+node,font));
+            sheet.addCell(new Label( 0,lineCount,textName,font));
 			sheet.addCell(new Label( 1,lineCount,"Daily", font));            
 			sheet.addCell(new Label( 4,lineCount,"AM", font));            
 			sheet.addCell(new Label( 7,lineCount,"MD", font));            

@@ -23,7 +23,8 @@ public class TransitLine implements Comparable {
     
     Hashtable[] links = new Hashtable[PERIODS];
     static String[] label = {"AM","MD","PM","EV","EA"};
-           
+    static Hashtable mNodeLookup = null;
+    
     /**
      * @param name Name of line, same as the transit line name in TP+.
      */
@@ -104,6 +105,7 @@ public class TransitLine implements Comparable {
     void reportSummary(WritableSheet sheet) {
         try {
             lineCount++;
+            
             sheet.addCell(new Label(0,2+lineCount,name));
             
             for (int i = 0; i<=PERIODS; i++) {
@@ -180,8 +182,9 @@ public class TransitLine implements Comparable {
      * 
      * @return Formatted text string of transit line boardings by station. 
      */
-    void reportStations(WritableSheet sheet) {
+    void reportStations(WritableSheet sheet, Hashtable lookup) {
         StationList list = new StationList();
+        mNodeLookup = lookup;
         
         // Loop for each time period
 
@@ -295,9 +298,17 @@ public class TransitLine implements Comparable {
         }
         void write(WritableSheet sheet) {
             try {
-                sheet.addCell(new Label(0,lineCount,name));
+
+                // Try to retrieve node name; just use node number if it 
+                // doesn't exist in database.
+                String textName = (String) mNodeLookup.get(name);
+                if (null == textName)
+                    textName = name;
+                
+
+                sheet.addCell(new Label(0,lineCount,textName));
                 for (int i = 0; i < 18; i++) {
-                    if (j[i]!=0)
+//                    if (j[i]!=0)
                         sheet.addCell(new Number((i/3)+i+1,lineCount,j[i]));
                 }
             } catch (Exception e) {
