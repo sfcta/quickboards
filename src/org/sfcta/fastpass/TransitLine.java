@@ -6,7 +6,8 @@
  */
 package org.sfcta.fastpass;
 import java.util.*;
-
+import jxl.write.*;
+import jxl.write.Number;
 
 /**
  * @author billy
@@ -16,6 +17,7 @@ import java.util.*;
 public class TransitLine implements Comparable {
 
     static int PERIODS = 5;
+    public static int lineCount = 0;
     String name = "";
     Vector nameChunks = null;
     
@@ -99,18 +101,22 @@ public class TransitLine implements Comparable {
 
     }
 
-    StringBuffer reportSummary() {
-        StringBuffer sb = new StringBuffer();
-        
-        sb.append(lalign(name,13));
-        
-        for (int i = 0; i<=PERIODS; i++) {
-            sb.append(ralign(mBoards[i],8) +
-                      ralign((int)mPassMiles[i],8) +
-                      ralign((int)mPassHours[i],8));
+    void reportSummary(WritableSheet sheet) {
+        try {
+            lineCount++;
+            sheet.addCell(new Label(0,2+lineCount,name));
+            
+            for (int i = 0; i<=PERIODS; i++) {
+                if (mBoards[i]>0)
+                    sheet.addCell(new Number(i*4+1,2+lineCount,mBoards[i]));
+                if (mPassMiles[i]>1)
+                    sheet.addCell(new Number(i*4+2,2+lineCount,(int)(0.5+mPassMiles[i])));
+                if (mPassHours[i]>1)
+                    sheet.addCell(new Number(i*4+3,2+lineCount,(int)(0.5+mPassHours[i])));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-    	sb.append("\r\n");
-        return sb;
     }
     
     /** 
@@ -174,8 +180,7 @@ public class TransitLine implements Comparable {
      * 
      * @return Formatted text string of transit line boardings by station. 
      */
-    StringBuffer reportStations() {
-        StringBuffer sb = new StringBuffer();
+    void reportStations(WritableSheet sheet) {
         StationList list = new StationList();
         
         // Loop for each time period
@@ -214,36 +219,37 @@ public class TransitLine implements Comparable {
             }
 
         }
-        // And now print it all out
-        sb.append("\r\nLine: "+name+"   Period: \r\n");
-        sb.append("        DAILY----------------   AM-------------------   MD-------------------   PM-------------------   EV-------------------   EA-------------------\r\n");
-        sb.append(" STA    BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL   BOARD   EXITS     VOL\r\n");
-        sb.append(list.toString());
-        
-        return sb;
+
+        try {
+            WritableCellFormat font =  new WritableCellFormat (new WritableFont(
+            		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
+            
+            lineCount+=2;
+            
+            sheet.addCell(new Label( 0,lineCount,"Line: "+name,font));
+            sheet.addCell(new Label( 1,lineCount,"Daily", font));            
+            sheet.addCell(new Label( 5,lineCount,"AM", font));            
+            sheet.addCell(new Label( 9,lineCount,"MD", font));            
+            sheet.addCell(new Label(13,lineCount,"PM", font));            
+            sheet.addCell(new Label(17,lineCount,"EV", font));            
+            sheet.addCell(new Label(21,lineCount,"EA", font));         
+
+            sheet.addCell(new Label(0,lineCount+1,"Station", font));         
+            for (int i = 0; i<6; i++) {
+            	sheet.addCell(new Label(i*4+1,lineCount+1,"Boards", font));			
+            	sheet.addCell(new Label(i*4+2,lineCount+1,"Exits", font));			
+            	sheet.addCell(new Label(i*4+3,lineCount+1,"Volume", font));			
+            }         
+            lineCount+=2;
+
+            // And now print it all out
+            list.write(sheet);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
-    String ralign(int value, int width) {
-	    if (value==0) {
-	        return (ralign(" ",width));
-	    }
-        return ralign(Integer.toString(value),width);
-    }
-
-    String ralign(long value, int width) {
-	    if (value==0) {
-	        return (ralign(" ",width));
-	    }
-        return ralign(Long.toString(value),width);
-    }
-
-    String ralign(String text, int width) {
-        StringBuffer sb = new StringBuffer();
-        int padding = width - text.length();
-        while (--padding >= 0) sb.append(" ");
-        sb.append(text);
-        return (sb.toString());
-    }
 
     class StationList {
         Hashtable staLookup = new Hashtable();
@@ -261,13 +267,12 @@ public class TransitLine implements Comparable {
             sd.addVolumes(period, brd, xit, vol);
         }
 
-        public String toString() {
-            StringBuffer sb = new StringBuffer();
+        void write(WritableSheet sheet) {
             Iterator i = listOfStations.iterator();
             while (i.hasNext()) {
-                sb.append(""+i.next());
+                ((StationData)i.next()).write(sheet);
+                lineCount++;
             }
-            return sb.toString();
         }
     }
 
@@ -288,15 +293,16 @@ public class TransitLine implements Comparable {
             j[4+period*3] += xit;
             j[5+period*3] += vol;
         }
-        public String toString() {
-            StringBuffer sb = new StringBuffer(ralign(name,5));
-
-            for (int i = 0; i < 18; i++) {
-                sb.append(ralign(j[i],8));
+        void write(WritableSheet sheet) {
+            try {
+                sheet.addCell(new Label(0,lineCount,name));
+                for (int i = 0; i < 18; i++) {
+                    if (j[i]!=0)
+                        sheet.addCell(new Number((i/3)+i+1,lineCount,j[i]));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-
-            sb.append("\r\n");
-            return sb.toString();
         }
     }
 

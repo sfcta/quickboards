@@ -8,8 +8,11 @@ package org.sfcta.fastpass;
 
 import java.util.*;
 import java.io.*;
+
 import com.pb.common.util.AppProperties;
 import com.svcon.jdbf.*;
+import jxl.*;
+import jxl.write.*;
 
 /**
  * @author tad
@@ -38,15 +41,16 @@ public class FastPass {
     
 	public static String[] mTimePeriods = {"am","md","pm","ev","ea"};  
 	public static String[] mPaths = 
-//		{"nsatw","nswta","nswtw","sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
-		{"sfwlw","nswtw"};
+		{"nsatw","nswta","nswtw","sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
+//		{"sfwlw","nswtw"};
 
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
     Hashtable mSummaryInterest = new Hashtable();
     String mSelectedTimePeriods = "";
-    String mOutFile = "fastpass.rpt";
+    String mOutFile = "fastpass.xls";
     boolean mPrepareSummary = true;
+    WritableWorkbook wb = null;
     
     public static void main(String[] args) {
         System.err.println("SFCTA FastPass:    Transit Assignment Summary Tool");
@@ -82,10 +86,15 @@ public class FastPass {
 
             mSelectedTimePeriods = ctlFile.getProperty("TimePeriods","am,md,pm,ev,ea");
 
-        } catch (Exception e) {System.exit(8);}
+            wb = Workbook.createWorkbook(new File(mOutFile));
 
-        readDBFs();
-        results();
+	        readDBFs();
+	        results();
+        } catch (IOException e) {
+            System.err.println("Error writing output file; is it already open?");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -203,69 +212,81 @@ public class FastPass {
     void results() {
         System.out.println("\n");
         StringBuffer sb;
-        PrintWriter pw = null;
-        try {
-            pw = new PrintWriter (
-                    		 new BufferedWriter (
-                    		 new FileWriter(mOutFile)));
-            
-            sb = reportStationLevelResults();
-            pw.println(sb);
 
-            sb = reportLineLevelResults();
-            pw.println("\f"+sb);
-            
-            sb = reportSummaryResults();
-            pw.println("\f"+sb);
-            
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if (null != pw) pw.close();
+        reportStationLevelResults();
+        reportLineLevelResults();
+        reportSummaryResults();
     }
 
-    StringBuffer reportStationLevelResults() {
-        Iterator stations = mStationInterest.values().iterator();
-        StringBuffer sb = new StringBuffer();
-        while (stations.hasNext()) {
-            TransitStop trStop = (TransitStop) stations.next();
-            sb.append(trStop.reportStations());
-        }
-        return sb;
+    void reportStationLevelResults() {
+		try {
+            WritableSheet sheet = wb.createSheet("Stations",1);
+	        Iterator stations = mStationInterest.values().iterator();
+	        while (stations.hasNext()) {
+	            TransitStop trStop = (TransitStop) stations.next();
+	            trStop.reportStations(sheet);
+	        }
+	    } catch (Exception e) {}
     }
     
-    StringBuffer reportSummaryResults() {
-        StringBuffer sb = new StringBuffer();
+    void reportSummaryResults() {
 
-        sb.append("Overall Line Summary\r\n");
-        sb.append("                DAILY----------------   AM-------------------   MD-------------------   PM-------------------   EV-------------------   EA-------------------\r\n");
-        sb.append("Line Name       BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr   BOARD  PassMi  PassHr\r\n");
+		TransitLine.lineCount = 0;
 
-        // Sort the lines
-        Vector c = new Vector(mSummaryInterest.values());
-        Collections.sort(c);
-        Enumeration lines = c.elements();
+		try {
+            WritableSheet sheet = wb.createSheet("LineStats",0);
+            
+			WritableCellFormat font =  new WritableCellFormat (new WritableFont(
+				WritableFont.ARIAL, 10, WritableFont.BOLD, false));
+			sheet.addCell(new Label(0,0,"Transit Line Summary", font));
+			sheet.addCell(new Label(1,1,"Daily", font));            
+			sheet.addCell(new Label(5,1,"AM", font));            
+			sheet.addCell(new Label(9,1,"MD", font));            
+			sheet.addCell(new Label(13,1,"PM", font));            
+			sheet.addCell(new Label(17,1,"EV", font));            
+			sheet.addCell(new Label(21,1,"EA", font));         
+			sheet.addCell(new Label(0,2,"Line Name", font));
+			for (int i = 0; i<6; i++) {
+				sheet.addCell(new Label(i*4+1,2,"Boards", font));			
+				sheet.addCell(new Label(i*4+2,2,"PassMi", font));			
+				sheet.addCell(new Label(i*4+3,2,"PassHr", font));			
+			}         
 
-        while (lines.hasMoreElements()) {
-            TransitLine trLine = (TransitLine) lines.nextElement();
-            sb.append(trLine.reportSummary());
+            // Sort the lines
+            Vector c = new Vector(mSummaryInterest.values());
+            Collections.sort(c);
+            Enumeration lines = c.elements();
+
+            while (lines.hasMoreElements()) {
+                TransitLine trLine = (TransitLine) lines.nextElement();
+                trLine.reportSummary(sheet);
+            }
+            wb.write();
+            wb.close();
+        } catch (Exception e) {
+            System.err.println("Error writing output file; is it already open?");
         }
-        return sb;
     }
     
 
-    StringBuffer reportLineLevelResults() {
-        StringBuffer sb = new StringBuffer();
+    void reportLineLevelResults() {
         // Sort the lines
         Vector c = new Vector(mLineInterest.values());
         Collections.sort(c);
         Enumeration lines = c.elements();
+		TransitLine.lineCount = 1;
+		
+		try {
+            WritableSheet sheet = wb.createSheet("Line Detail",2);
+            WritableCellFormat font =  new WritableCellFormat (new WritableFont(
+            		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
+            sheet.addCell(new Label(0,0,"Line Detail Report", font));
 
-        while (lines.hasMoreElements()) {
-            TransitLine trLine = (TransitLine) lines.nextElement();
-            sb.append(trLine.reportStations());
-        }
-        return sb;
+	        while (lines.hasMoreElements()) {
+	            TransitLine trLine = (TransitLine) lines.nextElement();
+	            trLine.reportStations(sheet);
+	        }
+	    } catch (Exception e) {}
     }
 
     String ralign(String text, int width) {

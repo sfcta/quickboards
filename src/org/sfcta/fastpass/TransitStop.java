@@ -7,6 +7,9 @@
 package org.sfcta.fastpass;
 
 import java.util.*;
+import jxl.write.*;
+import jxl.write.Number;
+
 
 /**
  * @author tad
@@ -15,6 +18,7 @@ import java.util.*;
  */
 public class TransitStop {
     static int PERIODS = 5;
+    static int lineCount = 0;
     static String TOTAL = "TOTAL";
     static String[] label = {"AM","MD","PM","EV","EA"};
     Hashtable lines = new Hashtable();
@@ -50,45 +54,73 @@ public class TransitStop {
             addVol(TOTAL, period,brds,xits);
     }
 
-    public StringBuffer reportStations() {
-        
-        StringBuffer sb = new StringBuffer();
-        
-        sb.append("------------------------------------------------------------------------------------\r\n");
-        sb.append("Sta "+node+":       DAILY        AM          MD          PM          EV          EA\r\n");
-        sb.append("               BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT   BRD  EXIT\r\n");
+    public void reportStations(WritableSheet sheet) {
+		try {
+            WritableCellFormat font =  new WritableCellFormat (new WritableFont(
+            		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
+           	sheet.addCell(new Label(0,0,"Station Report", font));
+            
+            lineCount+=2;
+            
+            sheet.addCell(new Label( 0,lineCount,"Station "+node,font));
+			sheet.addCell(new Label( 1,lineCount,"Daily", font));            
+			sheet.addCell(new Label( 4,lineCount,"AM", font));            
+			sheet.addCell(new Label( 7,lineCount,"MD", font));            
+			sheet.addCell(new Label(10,lineCount,"PM", font));            
+			sheet.addCell(new Label(13,lineCount,"EV", font));            
+			sheet.addCell(new Label(16,lineCount,"EA", font));         
+			for (int i = 0; i<6; i++) {
+				sheet.addCell(new Label(i*3+1,lineCount+1,"Boards", font));			
+				sheet.addCell(new Label(i*3+2,lineCount+1,"Exits", font));			
+			}         
 
-        // Show the total first
-        sb.append(punchRiders((LineStop)lines.get(TOTAL)));
-        sb.append("------------ ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----\r\n");
+			lineCount+=2;
+			
+            // Sort the lines
+            Vector c = new Vector(lines.values());
+            Collections.sort(c);
+            Enumeration enum = c.elements();
 
-        // Sort the lines
-        Vector c = new Vector(lines.values());
-        Collections.sort(c);
-        Enumeration enum = c.elements();
+            // Print the lines out
+            while (enum.hasMoreElements()) {
+                LineStop line = (LineStop) enum.nextElement();
+                if (line.name == TOTAL)
+                    continue;
+                punchRiders(line,sheet,false);
+            }
 
-        // Print the lines out
-        while (enum.hasMoreElements()) {
-            LineStop line = (LineStop) enum.nextElement();
-            if (line.name == TOTAL)
-                continue;
-            sb.append(punchRiders(line));
+            // Show the total last
+            punchRiders((LineStop)lines.get(TOTAL),sheet,true);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        sb.append("\r\n\r\n\r\n");
-        return sb;
     }
 
-    StringBuffer punchRiders(LineStop line) {
-        StringBuffer sb = new StringBuffer();
+    void punchRiders(LineStop line, WritableSheet sheet, boolean useBold) {
 
-        sb.append(lalign(line.name,12));
-        for (int i= 0; i<= PERIODS; i++) {
-            sb.append(ralign(line.riders[i*2],6));
-            sb.append(ralign(line.riders[1+i*2],6));
+        try {
+            WritableCellFormat wcf = null;
+
+            if (useBold)
+                wcf =  new WritableCellFormat (new WritableFont(
+            		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
+            else
+                wcf =  new WritableCellFormat (new WritableFont(
+                		WritableFont.ARIAL, 10, WritableFont.NO_BOLD, false));
+                
+            sheet.addCell(new Label(0,lineCount,line.name,wcf));
+
+            for (int i= 0; i<= PERIODS; i++) {
+                if (line.riders[i*2]>0)
+                    sheet.addCell(new Number(i*3+1,lineCount,line.riders[i*2],wcf));
+                if (line.riders[i*2+1]>0)
+                    sheet.addCell(new Number(i*3+2,lineCount,line.riders[i*2+1],wcf));
+            }
+            lineCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-        sb.append("\r\n");
-        return sb;
     }
 
     
