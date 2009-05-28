@@ -4,7 +4,7 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package fastpass;
+package org.sfcta.quickboards;
 
 /**
  * @author tad
@@ -25,26 +25,29 @@ public class TransitLink {
     long brdb=0;
     long xita=0;
     long xitb=0;
+    double freq=0.0;
+    
     Long seq;
     
     /**
      * 
      */
-    public TransitLink(Object[] fields) {
-        this.a = fields[FastPass.A].toString();
-        this.b = fields[FastPass.B].toString();
+    public TransitLink(Object[] fields, int A, int B,int MODE,int DIST,int VOL,int BRDA,int BRDB,int XITA,int XITB,int STOP_A,int STOP_B,int TIME,int SEQ, int FREQ) {
+        this.a = fields[A].toString();
+        this.b = fields[B].toString();
 
-        this.mode = ((Long)fields[FastPass.MODE]).longValue();
-        this.dist = ((Long)fields[FastPass.DIST]).longValue();
-        this.vol  = ((Long)fields[FastPass.VOL]).longValue();
-        this.brda = ((Long)fields[FastPass.BRDA]).longValue();
-        this.brdb = ((Long)fields[FastPass.BRDB]).longValue();
-        this.xita = ((Long)fields[FastPass.XITA]).longValue();
-        this.xitb = ((Long)fields[FastPass.XITB]).longValue();
-        this.stopa= ((Long)fields[FastPass.STOP_A]).longValue();
-        this.stopb= ((Long)fields[FastPass.STOP_B]).longValue();
-        this.time = ((Long)fields[FastPass.TIME]).longValue();
+        this.mode = ((Long)fields[MODE]).longValue();
+        this.dist = ((Long)fields[DIST]).longValue();
+        this.vol  = ((Long)fields[VOL]).longValue();
+        this.brda = ((Long)fields[BRDA]).longValue();
+        this.brdb = ((Long)fields[BRDB]).longValue();
+        this.xita = ((Long)fields[XITA]).longValue();
+        this.xitb = ((Long)fields[XITB]).longValue();
+        this.stopa= ((Long)fields[STOP_A]).longValue();
+        this.stopb= ((Long)fields[STOP_B]).longValue();
+        this.time = ((Long)fields[TIME]).longValue();
+        this.freq = ((Double)fields[FREQ]).doubleValue();
 
-        this.seq = ((Long)fields[FastPass.SEQ]);
+        this.seq = ((Long)fields[SEQ]);
     }
 }

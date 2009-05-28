@@ -4,7 +4,7 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package fastpass;
+package org.sfcta.quickboards;
 import java.util.*;
 
 import jxl.write.*;
@@ -18,20 +18,30 @@ import jxl.write.Number;
 public class TransitLine implements Comparable {
 
     static int PERIODS = 5;
+    static String[] label = {"AM","MD","PM","EV","EA"};
+    static double[] timePeriodFactors = {1.0, 0.44, 0.18, 0.37, 0.22, 0.58}; 
+    static Hashtable mNodeLookup = null;
     public static int lineCount = 0;
+
     String name = "";
     Vector nameChunks = null;
-    
+
+    // These member variables represent Daily and then the five time periods
+    int    mBoards[]    = {0,0,0,0,0,0};
+    double mPassMiles[] = {0,0,0,0,0,0};
+    double mPassHours[] = {0,0,0,0,0,0};
+    long   mMaxLoadPoint[] = {0,0,0,0,0,0}; 
+    double mMaxLoad[] =      {0,0,0,0,0,0};
+    double mHeadway[] = {0,0,0,0,0,0};
+
     Hashtable[] links = new Hashtable[PERIODS];
-    static String[] label = {"AM","MD","PM","EV","EA"};
-    static Hashtable mNodeLookup = null;
     
     /**
      * @param name Name of line, same as the transit line name in TP+.
      */
     public TransitLine(String name) {
         this.name = name;
-        nameChunks = FastPass.getNameChunks(name);
+        nameChunks = QuickBoards.getNameChunks(name);
     }
 
     
@@ -54,6 +64,8 @@ public class TransitLine implements Comparable {
         if (null == tlink) {
             // It's a new link; add it to the hashtable.
             links[period].put(link.seq, link);
+            tlink = link;
+            this.mHeadway[period+1] = tlink.freq;
         } else {
             // Link already exists, aggregate results.
             tlink.brda += link.brda;
@@ -63,18 +75,18 @@ public class TransitLine implements Comparable {
             tlink.vol += link.vol;
 
             // Be sure to flag stopnodes if they weren't stops previously 
-            if (tlink.stopa==0)
-                tlink.stopa = link.stopa;
-            if (tlink.stopb==0)
-                tlink.stopb = link.stopb;
+            if (tlink.stopa==0) tlink.stopa = link.stopa;
+            if (tlink.stopb==0) tlink.stopb = link.stopb;
+
         }
-        
+
+        // Replace max load point if necessary
+        if (tlink.stopa > 0  &&  tlink.vol > mMaxLoad[period+1]) {
+            mMaxLoad[period+1] = tlink.vol;
+            mMaxLoadPoint[period+1] = Long.parseLong(tlink.a);
+        }
     }
 
-    int mBoards[] = {0,0,0,0,0,0};
-    double mPassMiles[] = {0,0,0,0,0,0};
-    double mPassHours[] = {0,0,0,0,0,0};
-    
     /**
      * Accumulate summary info for this link
      * @param link
@@ -95,15 +107,15 @@ public class TransitLine implements Comparable {
         	mBoards[0] += link.brdb;
         }
         
-        mPassMiles[period] += 0.1 * (link.vol * link.dist);
-        mPassHours[period] += 0.1 / 60.0 * (link.vol * link.time);
+        mPassMiles[period] += 0.01 * (link.vol * link.dist);
+        mPassHours[period] += 0.01 / 60.0 * (link.vol * link.time);
 
-        mPassMiles[0] += 0.1 * (link.vol * link.dist);
-        mPassHours[0] += 0.1 / 60.0 * (link.vol * link.time);
+        mPassMiles[0] += 0.01 * (link.vol * link.dist);
+        mPassHours[0] += 0.01 / 60.0 * (link.vol * link.time);
 
     }
 
-    void reportSummary(WritableSheet sheet) {
+    void reportSummary(WritableSheet sheet, Hashtable lookup) {
         try {
             lineCount++;
             
@@ -111,11 +123,22 @@ public class TransitLine implements Comparable {
             
             for (int i = 0; i<=PERIODS; i++) {
                 if (mBoards[i]>0)
-                    sheet.addCell(new Number(i*4+1,2+lineCount,mBoards[i]));
+                    sheet.addCell(new Number(1+i,2+lineCount,mBoards[i]));
+                if (mHeadway[i] >0 )
+                    sheet.addCell(new Number(8+i,2+lineCount,(float)(mHeadway[i])));
                 if (mPassMiles[i]>1)
-                    sheet.addCell(new Number(i*4+2,2+lineCount,(int)(0.5+mPassMiles[i])));
+                    sheet.addCell(new Number(15+i,2+lineCount,(int)(0.5+mPassMiles[i])));
                 if (mPassHours[i]>1)
-                    sheet.addCell(new Number(i*4+3,2+lineCount,(int)(0.5+mPassHours[i])));
+                    sheet.addCell(new Number(22+i,2+lineCount,(int)(0.5+mPassHours[i])));
+                
+                // Max Load Point summary (skip daily):                    
+                if (i>0) {
+                    if (mMaxLoad[i]>0) {
+                        String textName = (String) lookup.get(Long.toString(mMaxLoadPoint[i]));
+                        sheet.addCell(new Label (26+i*3,2+lineCount,textName));                        
+                        sheet.addCell(new Number(27+i*3,2+lineCount,(int)(0.5+mMaxLoad[i]*timePeriodFactors[i])));
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -231,18 +254,19 @@ public class TransitLine implements Comparable {
             lineCount+=2;
             
             sheet.addCell(new Label( 0,lineCount,"Line: "+name,font));
-            sheet.addCell(new Label( 1,lineCount,"Daily", font));            
-            sheet.addCell(new Label( 5,lineCount,"AM", font));            
-            sheet.addCell(new Label( 9,lineCount,"MD", font));            
-            sheet.addCell(new Label(13,lineCount,"PM", font));            
-            sheet.addCell(new Label(17,lineCount,"EV", font));            
-            sheet.addCell(new Label(21,lineCount,"EA", font));         
+            sheet.addCell(new Label( 2,lineCount,"Daily", font));            
+            sheet.addCell(new Label( 6,lineCount,"AM", font));            
+            sheet.addCell(new Label(10,lineCount,"MD", font));            
+            sheet.addCell(new Label(14,lineCount,"PM", font));            
+            sheet.addCell(new Label(18,lineCount,"EV", font));            
+            sheet.addCell(new Label(22,lineCount,"EA", font));         
 
-            sheet.addCell(new Label(0,lineCount+1,"Station", font));         
+            sheet.addCell(new Label(0,lineCount+1,"Node", font));         
+            sheet.addCell(new Label(1,lineCount+1,"Station", font));         
             for (int i = 0; i<6; i++) {
-            	sheet.addCell(new Label(i*4+1,lineCount+1,"Boards", font));			
-            	sheet.addCell(new Label(i*4+2,lineCount+1,"Exits", font));			
-            	sheet.addCell(new Label(i*4+3,lineCount+1,"Volume", font));			
+            	sheet.addCell(new Label(i*4+2,lineCount+1,"Boards", font));			
+            	sheet.addCell(new Label(i*4+3,lineCount+1,"Exits", font));			
+            	sheet.addCell(new Label(i*4+4,lineCount+1,"Volume", font));			
             }         
             lineCount+=2;
 
@@ -307,10 +331,11 @@ public class TransitLine implements Comparable {
                     textName = name;
                 
 
-                sheet.addCell(new Label(0,lineCount,textName));
+                sheet.addCell(new Label(0,lineCount,name));
+                sheet.addCell(new Label(1,lineCount,textName));
                 for (int i = 0; i < 18; i++) {
 //                    if (j[i]!=0)
-                        sheet.addCell(new Number((i/3)+i+1,lineCount,j[i]));
+                        sheet.addCell(new Number((i/3)+i+2,lineCount,j[i]));
                 }
             } catch (Exception e) {
                 e.printStackTrace();

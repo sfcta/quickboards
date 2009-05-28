@@ -4,7 +4,7 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package fastpass;
+package org.sfcta.quickboards;
 
 import java.util.*;
 
@@ -22,6 +22,8 @@ public class TransitStop {
     static String TOTAL = "TOTAL";
     static String[] label = {"AM","MD","PM","EV","EA"};
     Hashtable lines = new Hashtable();
+    Hashtable mSuppNodes = new Hashtable();
+    
     String node;
     LineStop mTotalRiders;
     
@@ -34,6 +36,26 @@ public class TransitStop {
         lines.put(TOTAL,mTotalRiders);
     }
 
+    public void addSuppNodes(String node, String vol, boolean inbound) {
+        // Get the vector of inbound/outbound supplink flows  
+        int[] flows = (int[]) mSuppNodes.get(node);
+        if (null == flows) {
+            flows = new int[2];
+            flows[0] = 0;
+            flows[1] = 0;
+            mSuppNodes.put(node,flows);
+        }
+
+        try {
+            if (inbound) 
+                flows[0] += Integer.parseInt(vol);
+            else
+                flows[1] += Integer.parseInt(vol);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
     public void addVol(String line, int period, Object brds, Object xits) {
         LineStop ls = (LineStop)lines.get(line);
 
@@ -70,6 +92,7 @@ public class TransitStop {
 
             
             sheet.addCell(new Label( 0,lineCount,textName,font));
+            sheet.addCell(new Label( 0,lineCount+1,""+node,font));
 			sheet.addCell(new Label( 1,lineCount,"Daily", font));            
 			sheet.addCell(new Label( 4,lineCount,"AM", font));            
 			sheet.addCell(new Label( 7,lineCount,"MD", font));            
@@ -86,11 +109,11 @@ public class TransitStop {
             // Sort the lines
             Vector c = new Vector(lines.values());
             Collections.sort(c);
-            Enumeration enum = c.elements();
+            Enumeration enumm = c.elements();
 
             // Print the lines out
-            while (enum.hasMoreElements()) {
-                LineStop line = (LineStop) enum.nextElement();
+            while (enumm.hasMoreElements()) {
+                LineStop line = (LineStop) enumm.nextElement();
                 if (line.name == TOTAL)
                     continue;
                 punchRiders(line,sheet,false);
@@ -99,11 +122,40 @@ public class TransitStop {
             // Show the total last
             punchRiders((LineStop)lines.get(TOTAL),sheet,true);
             
+            // Now print access/egress links
+            lineCount++;
+            enumm = mSuppNodes.keys();
+            while (enumm.hasMoreElements()) {
+                String node = (String)enumm.nextElement();
+                punchSuppLinks(sheet, lookup, node, (int[]) mSuppNodes.get(node));
+            }
+            
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+    void punchSuppLinks(WritableSheet sheet, Hashtable lookup, String node, int[] flows) {
+        // need to add time-period stuff. let's just get daily, for now.
+        try {
+            // search for node name
+            String textName = (String) lookup.get(node);
+            if (null == textName)
+                textName = node;
+            if (textName.equals("0")) textName="zones";
+                
+            sheet.addCell(new Label(0,lineCount,"From "+textName));
+            sheet.addCell(new Number(1,lineCount,flows[0]));
+            lineCount++;
+            sheet.addCell(new Label(0,lineCount,"To "+textName));
+            sheet.addCell(new Number(1,lineCount,flows[1]));
+            lineCount++;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
+    }
+    
     void punchRiders(LineStop line, WritableSheet sheet, boolean useBold) {
 
         try {
@@ -134,11 +186,11 @@ public class TransitStop {
 	class LineStop implements Comparable {
 	    Vector nameChunks = null;
 	    public String name;
-	    public long riders[] = {0,0,0,0,0,0,0,0,0,0,0,0};
+	    public long riders[] = {0,0,0,0,0,0,0,0,0,0,0,0}; // Two for each time period and two for daily.
 	
 	    public LineStop(String name) {
 	        this.name = name;
-	        nameChunks = FastPass.getNameChunks(name);
+	        nameChunks = QuickBoards.getNameChunks(name);
 	    }
 	    
 	    /** 

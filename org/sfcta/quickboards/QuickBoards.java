@@ -4,7 +4,7 @@
  * (c) 2004 San Francisco County Transportation Authority.
  * 
  */
-package fastpass;
+package org.sfcta.quickboards;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -22,63 +22,69 @@ import jxl.write.*;
  *
  * (c) 2004 San Francisco County Transportation Authority.
  */
-public class FastPass {
+public class QuickBoards {
 
-	public static int A = 0;
-	public 	static int B = 1;
-	public 	static int TIME = 2;
-	public 	static  int MODE = 3;
-	public 	static int PLOT = 4;
-	public 	static int COLOR = 5;
-	public 	static int STOP_A = 6;
-	public 	static int STOP_B = 7;
-	public 	static int DIST = 8;
-	public 	static int NAME = 9;
-	public 	static int SEQ = 10;
-	public 	static int OWNER = 11;
-	public 	static int VOL = 12;
-	public 	static int BRDA = 13;
-	public 	static int XITA = 14;
-	public 	static int BRDB = 15;
-	public 	static int XITB = 16;
+	public int DBFCOLUMNS = 17;
+
+	public   int A =      0;
+	public 	 int B =      1;
+	public 	 int TIME =   2;
+    public   int MODE =   3;
+    public   int FREQ =   4;
+	public 	 int PLOT =   5;
+	public 	 int COLOR =  6;
+	public 	 int STOP_A = 7;
+	public 	 int STOP_B = 8;
+	public 	 int DIST =   9;
+	public 	 int NAME =  10;
+	public 	 int SEQ =   11;
+	public 	 int OWNER = 12;
+	public 	 int VOL =   13;
+	public 	 int BRDA =  14;
+	public 	 int XITA =  15;
+	public 	 int BRDB =  16;
+	public 	 int XITB =  17;
     
 	public static String[] mTimePeriods = {"am","md","pm","ev","ea"};  
-	public static String[] mPaths = 
-		{"nsatw","nswta","nswtw","sfwlw","sfabw","sfapw","sfwba","sfwbw","sfwmw","sfwpa","sfwpw"};
-//		{"sfwlw","nswtw"};
+	public Vector vPaths = new Vector();
+    
+    //		{"sfwlw","nswtw"};
 
     Hashtable mLineInterest = new Hashtable();
     Hashtable mStationInterest = new Hashtable();
     Hashtable mSummaryInterest = new Hashtable();
+    Hashtable mLinesNotInterested = new Hashtable();
     Vector mLinePatterns = new Vector();
     String mSelectedTimePeriods = "";
-    String mOutFile = "fastpass.xls";
+    String mOutFile = "quickboards.xls";
 	String mNodesFile = null;
     boolean mPrepareSummary = true;
     WritableWorkbook wb = null;
     static Hashtable mNodeLookup;
     
     public static void main(String[] args) {
-        System.err.println("\nSFCTA FastPass:    Transit Assignment Summary Tool");
+        System.err.println("\nSFCTA QuickBoards:    Transit Assignment Summary Tool");
         if (args.length == 0) {
-            System.err.println("Usage:\nfastpass  ctlfile  [outfile]\n");
-            System.err.println("Control file keywords:\n");
-            System.err.println("NodesFile=[c:\\javalibs\\nodes.xls] path of nodes.xls equivalency file");
+            System.err.println("Usage:\nquickboards  ctlfile  [outfile]\n");
+            System.err.println("Control file keywords:\n\n");
+            System.err.println("NodesFile=  [f:\\champ\\util\\nodes.xls] path of nodes.xls lookup file");
             System.err.println("TimePeriods=[am,md,pm,ev,ea] list of time periods to analyze");
-            System.err.println("LineStats=[t] true/false to create summary stats for all lines");
-            System.err.println("Lines=[] csv list of TP+ line names for station-level boardings");
-            System.err.println("Stations=[] csv list of TP+ nodes for detailed boardings by line\n");
+            System.err.println("LineStats=  [t|f] true/false to create summary stats for all lines");
+            System.err.println("Lines=      [] csv list of TP+ line names for station-level boardings");
+            System.err.println("Stations=   [] csv list of TP+ nodes for detailed boardings by line");
+            System.err.println("Paths=      [] csv list of five-letter codes of transit dbf's to load (nswtw,nswta,nsatw,sfwlw,sfabw,sfapw,sfwba,sfwbw,sfwmw,sfwpa,sfwpw,viswmw)");
+            System.err.println("Summary=    [t|f] true/false to generate line-level summary (true)\n");
             
-            System.exit(8);
+            System.exit(2);
         }
 
-        new FastPass(args);
+        new QuickBoards(args);
     }
 
     /**
      * Constructor.  Read the ctl file, and start everything. 
      */
-    public FastPass(String[] args) {
+    public QuickBoards(String[] args) {
         
         try {
             AppProperties ctlFile = new AppProperties(args[0]);
@@ -93,19 +99,29 @@ public class FastPass {
             if (!"".equals(stations))
                 prepareStationLevelBoardings(stations);
 
-            mNodesFile = ctlFile.getProperty("NodesFile","c:\\javalibs\\nodes.xls");
+            mNodesFile = ctlFile.getProperty("NodesFile","f:\\champ\\util\\nodes.xls");
 
-            String summary = ctlFile.getProperty("Summary","");
-            if (!"".equals(summary))
-                mPrepareSummary = true;
+            String summary = ctlFile.getProperty("Summary","t");
+            if ("f".equals(summary))
+                mPrepareSummary = false;
 
             mSelectedTimePeriods = ctlFile.getProperty("TimePeriods","am,md,pm,ev,ea");
 
+            // Parse out the DBFs to read
+            String paths = ctlFile.getProperty("Paths","nswtw,nswta,nsatw,sfwlw,sfabw,sfapw,sfwba,sfwbw,sfwmw,sfwpa,sfwpw,viswmw");
+            if (!paths.equals("")) {
+                StringTokenizer st = new StringTokenizer(paths,",");
+                while (st.hasMoreTokens()) {
+                    vPaths.add(st.nextToken());
+                }
+            } 
+            
             wb = Workbook.createWorkbook(new File(mOutFile));
-
             mNodeLookup = populateNodeLookup();
+
             readDBFs();
 	        results();
+
         } catch (IOException e) {
             System.err.println("Error writing output file; is it already open?");
         } catch (Exception e) {
@@ -175,16 +191,81 @@ public class FastPass {
                 char c = trnLine.charAt(i);
                 sb.append(c=='*' ? ".*" : ""+c); 
             }
-            mLinePatterns.add(Pattern.compile(""+sb));
+            // Convert to all uppercase since TP+ always outputs uppercase
+            // even if you don't want it to
+            String linePattern = sb.toString().toUpperCase();
+            
+            // and add the line pattern to the list we're interested in.
+            mLinePatterns.add(Pattern.compile(linePattern));
         }
      }
             
+     /**
+      * Discover the field positions in the DBF file.  These change depending
+      * on what version of TP+/Cube produced the output files.
+      * 
+      * @param dbf File to read
+      * @return Hashtable of field names and their position in the file, or null if error 
+      */
+    void learnFieldPositions(DBFReader dbf) {
+        Hashtable table;
+        table = new Hashtable();
+        DBFCOLUMNS = dbf.getFieldCount();
+        try {
+            for (int i=0; i < DBFCOLUMNS; i++) {
+                JDBField f = dbf.getField(i);
+                table.put(f.getName(),new Integer(i));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(8);
+        }
+        
+        A =      getPosition(table, "A");
+        B =      getPosition(table, "B");
+        TIME =   getPosition(table, "TIME");
+        MODE =   getPosition(table, "MODE");
+        FREQ =   getPosition(table, "FREQ");
+        PLOT =   getPosition(table, "PLOT");
+        COLOR =  getPosition(table, "COLOR");
+        STOP_A = getPosition(table, "STOP_A");
+        STOP_B = getPosition(table, "STOP_B");
+        DIST =   getPosition(table, "DIST");
+        NAME =   getPosition(table, "NAME");
+        SEQ =    getPosition(table, "SEQ");
+        OWNER =  getPosition(table, "OWNER");
+        VOL =    getPosition(table, "AB_VOL");
+        BRDA =   getPosition(table, "AB_BRDA");
+        XITA =   getPosition(table, "AB_XITA");
+        BRDB =   getPosition(table, "AB_BRDB");
+        XITB =   getPosition(table, "AB_XITB");
+    }
 
+
+    
+    
+    
+    /** 
+     * Find the DBF field we're looking for.
+     * @param fields The table of fields and their positions
+     * @param s Name of the field we're interested in
+     * @return Field position in the array
+     */
+    int getPosition (Hashtable fields, String s) {
+        int i = -1;
+        Integer g = (Integer) fields.get(s);
+        if (g != null)
+            i = g.intValue();
+     
+        return i;
+    }
+    
     /**
+     * MAIN LOOP! ---------------------------------------
      * Read the required DBF files and populate the data vectors.
      */
     void readDBFs() {
-        int steps = mPaths.length * (1+mSelectedTimePeriods.length())/3;
+        int steps = vPaths.size() * (1+mSelectedTimePeriods.length())/3;
         for (int i=0; i<steps;i++) System.err.print("-"); System.err.println("");
         
         for (int period = 0; period < mTimePeriods.length; period++) {
@@ -198,47 +279,90 @@ public class FastPass {
           String parentDir = x.getAbsoluteFile().getParent();
           
           // Loop on each DBF file 
-          for (int path = 0; path < mPaths.length; path++) {
+          Enumeration pthEnum = vPaths.elements();
+          while (pthEnum.hasMoreElements()) {
+            String pth = (String) pthEnum.nextElement();
 
             String dbfFile = parentDir + File.separator + 
-            	mPaths[path] + mTimePeriods[period]+".dbf";
+            	pth + mTimePeriods[period]+".dbf";
             DBFReader dbf = null;
             
             try {
                 System.err.print("=");
+
+                // Skip files that aren't there...
+                if (! (new File(dbfFile).exists())) {
+                    System.err.println(" File missing: "+dbfFile);
+                    continue;
+                }
+                    
+                // Otherwise open 'er on up.
                 dbf = new DBFReader(dbfFile);
+                
+                // Find out where the relevant columns are
+                learnFieldPositions(dbf);
 
                 while (dbf.hasNextRecord()) {
-                    Object[] fields = dbf.nextRecord();
+                    Object[] fields = null;
+                    fields = dbf.nextRecord();
+                    if (fields.length < DBFCOLUMNS) {
+                        System.err.println("\n\nERROR: "+dbfFile
+                                + "\ndoes not have the correct number of columns."
+                                + "\nThe transit assignment probably failed.\n");
+                        System.exit(8);
+                    }
 
                     long seq = ((Long)fields[SEQ]).longValue();
                     
-                    // Sequence "0" records are zone-centroids; skip.
-                    if (0 == seq)
-                        continue;
+                    // Sequence "0" records are zone-centroids and other nonsense.
+                    // Let's see if it's a supplink that we care about, otherwise skip it.
+                    if (0 == seq) {
+                        String a = fields[A].toString();
+                        String b = fields[B].toString();
 
-                    // Check station interest.
+                        if (null != mStationInterest.get(a)) {
+                            TransitStop ts = (TransitStop) mStationInterest.get(a);
+                            if (Integer.parseInt(b)<=1899) b = "0";
+                            ts.addSuppNodes(b,fields[VOL].toString(),false);
+                        } 
+
+                        if (null != mStationInterest.get(b)) {
+                            TransitStop ts = (TransitStop) mStationInterest.get(b);
+                            if (Integer.parseInt(a)<=1899) a = "0";
+                            ts.addSuppNodes(a,fields[VOL].toString(),true);
+                        }
+                         
+                        // No other work needs to be done on a SEQ==0 record
+                        continue;
+                    }
+
+                    // Check station interest. -------------------------------
                     // If first link in a sequence, check its ANODE.
                     if (1 == seq && null != mStationInterest.get(fields[A].toString())
                             && "1".equals(fields[STOP_A].toString())) {
                         TransitStop ts = (TransitStop) mStationInterest.get(fields[A].toString());
-                        ts.addVol(fields[NAME].toString(),period,fields[BRDA],fields[XITA]);
+                        ts.addVol(fields[NAME].toString(),
+                                period,fields[BRDA],
+                                fields[XITA]);
                     }
+                    
                     // And for all links, check their BNODE.
                     if (null != mStationInterest.get(fields[B].toString())
                             && "1".equals(fields[STOP_B].toString())) {
                         TransitStop ts = (TransitStop) mStationInterest.get(fields[B].toString());
-                        ts.addVol(fields[NAME].toString(),period,fields[BRDB],fields[XITB]);
+                        ts.addVol(fields[NAME].toString(),period,
+                                fields[BRDB],
+                                fields[XITB]);
                     }
                     
-                    
-                    // Check for line interest
+                    // Populate link fields
                     String name = fields[NAME].toString();
-                    TransitLine line = (TransitLine) mLineInterest.get(name);
-                    TransitLink link = null;
+                    TransitLink link = new TransitLink(fields,
+                             A,  B, MODE, DIST, VOL, BRDA, BRDB, XITA, XITB, STOP_A, STOP_B, TIME, SEQ, FREQ); 
 
-                    // Newfangled code to allow wildcards...
-                    if (line == null) {
+                    // See if we're interested in this line's details specifically
+                    TransitLine line = (TransitLine) mLineInterest.get(name);
+                    if (line == null && mLinesNotInterested.get(name) == null) {
                         for (int i=0; i<mLinePatterns.size(); i++) {
                             Pattern p = (Pattern) mLinePatterns.elementAt(i);
                             Matcher m = p.matcher(name);
@@ -248,28 +372,30 @@ public class FastPass {
                                 break;
                             }
                         }
-                    }
-                    
-                    if (line != null) {
-                        link = new TransitLink(fields);
-                        line.addLink(link, period);
+                        // Didn't match; let's save that result so we don't have to check each time
+                        mLinesNotInterested.put(name,"");
                     }
 
-                    // Accumulate summary stats
+                    // Accumulate summary stats -------------------------------
                     if (mPrepareSummary) {
                         TransitLine sumLine = (TransitLine) mSummaryInterest.get(name);
-
                         if (null == sumLine) {
-                            sumLine = new TransitLine(name);
-                            mSummaryInterest.put(name,sumLine);
-                        }
-                        
-                        if (null == link) {
-                            link = new TransitLink(fields);
-                        }
-                        sumLine.addSummary(link,period);
+                            if (null == line) line = new TransitLine(name);
+                            mSummaryInterest.put(name,line);
+                        } else
+                            line = sumLine;
                     }
+
+                    if (line == null) {
+                        line = new TransitLine(name);
+                    } 
+
+                    line.addSummary(link,period);
+                    line.addLink(link, period);
+
+                    // why is this here?                    DBFCOLUMNS = 17;
                 }
+
                 dbf.close();
                 dbf = null;
             } catch (JDBFException je) {je.printStackTrace();}
@@ -283,7 +409,6 @@ public class FastPass {
      */
     void results() {
         System.out.println("\n");
-        StringBuffer sb;
 
         reportStationLevelResults();
         reportLineLevelResults();
@@ -311,19 +436,31 @@ public class FastPass {
 			WritableCellFormat font =  new WritableCellFormat (new WritableFont(
 				WritableFont.ARIAL, 10, WritableFont.BOLD, false));
 			sheet.addCell(new Label(0,0,"Transit Line Summary", font));
-			sheet.addCell(new Label(1,1,"Daily", font));            
-			sheet.addCell(new Label(5,1,"AM", font));            
-			sheet.addCell(new Label(9,1,"MD", font));            
-			sheet.addCell(new Label(13,1,"PM", font));            
-			sheet.addCell(new Label(17,1,"EV", font));            
-			sheet.addCell(new Label(21,1,"EA", font));         
-			sheet.addCell(new Label(0,2,"Line Name", font));
-			for (int i = 0; i<6; i++) {
-				sheet.addCell(new Label(i*4+1,2,"Boards", font));			
-				sheet.addCell(new Label(i*4+2,2,"PassMi", font));			
-				sheet.addCell(new Label(i*4+3,2,"PassHr", font));			
-			}         
 
+            sheet.addCell(new Label( 1,1,"Boardings",font));
+            sheet.addCell(new Label( 9,1,"Headways",font));   // 9 instead of 8, since no daily headway exists.
+            sheet.addCell(new Label(15,1,"Passenger-Miles",font));
+            sheet.addCell(new Label(22,1,"Passenger-Hours",font));
+            sheet.addCell(new Label(29,1,"Max Load Points",font));
+            
+			sheet.addCell(new Label(0,2,"Line Name", font));
+			for (int i = 0; i<4; i++) {
+                sheet.addCell(new Label(1+7*i,2,(i==1 ? " ":"Daily"), font)); // No Daily headway label;-)              
+                sheet.addCell(new Label(2+7*i,2,"AM", font));            
+                sheet.addCell(new Label(3+7*i,2,"MD", font));            
+                sheet.addCell(new Label(4+7*i,2,"PM", font));            
+                sheet.addCell(new Label(5+7*i,2,"EV", font));            
+                sheet.addCell(new Label(6+7*i,2,"EA", font));         
+			}         
+            
+			// Max Load Point labels
+            sheet.addCell(new Label(29+0,2,"AM", font));            
+            sheet.addCell(new Label(29+3,2,"MD", font));            
+            sheet.addCell(new Label(29+6,2,"PM", font));            
+            sheet.addCell(new Label(29+9,2,"EV", font));            
+            sheet.addCell(new Label(29+12,2,"EA", font));         
+
+            
             // Sort the lines
             Vector c = new Vector(mSummaryInterest.values());
             Collections.sort(c);
@@ -331,7 +468,7 @@ public class FastPass {
 
             while (lines.hasMoreElements()) {
                 TransitLine trLine = (TransitLine) lines.nextElement();
-                trLine.reportSummary(sheet);
+                trLine.reportSummary(sheet,mNodeLookup);
             }
             wb.write();
             wb.close();
