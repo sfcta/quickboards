@@ -323,13 +323,13 @@ public class QuickBoards {
                         if (null != mStationInterest.get(a)) {
                             TransitStop ts = (TransitStop) mStationInterest.get(a);
                             if (Integer.parseInt(b)<=1899) b = "0";
-                            ts.addSuppNodes(b,fields[VOL].toString(),false);
+                            ts.addSuppNodes(b,period,fields[VOL].toString(),false);
                         } 
 
                         if (null != mStationInterest.get(b)) {
                             TransitStop ts = (TransitStop) mStationInterest.get(b);
                             if (Integer.parseInt(a)<=1899) a = "0";
-                            ts.addSuppNodes(a,fields[VOL].toString(),true);
+                            ts.addSuppNodes(a,period,fields[VOL].toString(),true);
                         }
                          
                         // No other work needs to be done on a SEQ==0 record

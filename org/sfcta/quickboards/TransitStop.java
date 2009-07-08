@@ -36,21 +36,23 @@ public class TransitStop {
         lines.put(TOTAL,mTotalRiders);
     }
 
-    public void addSuppNodes(String node, String vol, boolean inbound) {
+    public void addSuppNodes(String node, int period, String vol, boolean inbound) {
         // Get the vector of inbound/outbound supplink flows  
-        int[] flows = (int[]) mSuppNodes.get(node);
+        int[][] flows = (int[][]) mSuppNodes.get(node);
         if (null == flows) {
-            flows = new int[2];
-            flows[0] = 0;
-            flows[1] = 0;
+            flows = new int[2][PERIODS];
+            for (int i = 0; i<PERIODS; i++) {
+                flows[0][i] = 0;
+                flows[1][i] = 0;
+            }
             mSuppNodes.put(node,flows);
         }
 
         try {
             if (inbound) 
-                flows[0] += Integer.parseInt(vol);
+                flows[0][period] += Integer.parseInt(vol);
             else
-                flows[1] += Integer.parseInt(vol);
+                flows[1][period] += Integer.parseInt(vol);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -91,17 +93,16 @@ public class TransitStop {
                 textName = "Station "+node;
 
             
-            sheet.addCell(new Label( 0,lineCount,textName,font));
-            sheet.addCell(new Label( 0,lineCount+1,""+node,font));
-			sheet.addCell(new Label( 1,lineCount,"Daily", font));            
-			sheet.addCell(new Label( 4,lineCount,"AM", font));            
-			sheet.addCell(new Label( 7,lineCount,"MD", font));            
-			sheet.addCell(new Label(10,lineCount,"PM", font));            
-			sheet.addCell(new Label(13,lineCount,"EV", font));            
-			sheet.addCell(new Label(16,lineCount,"EA", font));         
-			for (int i = 0; i<6; i++) {
-				sheet.addCell(new Label(i*3+1,lineCount+1,"Boards", font));			
-				sheet.addCell(new Label(i*3+2,lineCount+1,"Exits", font));			
+            sheet.addCell(new Label( 1,lineCount+1,""+node,font));
+			sheet.addCell(new Label( 2,lineCount,"Daily", font));            
+			sheet.addCell(new Label( 5,lineCount,"AM", font));            
+			sheet.addCell(new Label( 8,lineCount,"MD", font));            
+			sheet.addCell(new Label(11,lineCount,"PM", font));            
+			sheet.addCell(new Label(14,lineCount,"EV", font));            
+			sheet.addCell(new Label(17,lineCount,"EA", font));         
+			for (int i = 0; i<PERIODS+1; i++) {
+				sheet.addCell(new Label(i*3+2,lineCount+1,"Boards", font));			
+				sheet.addCell(new Label(i*3+3,lineCount+1,"Exits", font));			
 			}         
 
 			lineCount+=2;
@@ -113,6 +114,7 @@ public class TransitStop {
 
             // Print the lines out
             while (enumm.hasMoreElements()) {
+            	sheet.addCell(new Label( 0,lineCount,textName,font));
                 LineStop line = (LineStop) enumm.nextElement();
                 if (line.name == TOTAL)
                     continue;
@@ -120,14 +122,21 @@ public class TransitStop {
             }
 
             // Show the total last
+            sheet.addCell(new Label( 0,lineCount,textName,font));
             punchRiders((LineStop)lines.get(TOTAL),sheet,true);
+            lineCount++;
             
             // Now print access/egress links
+			for (int i = 0; i<PERIODS+1; i++) {
+				sheet.addCell(new Label(i*3+2,lineCount,"From", font));			
+				sheet.addCell(new Label(i*3+3,lineCount,"To", font));			
+			}         
             lineCount++;
             enumm = mSuppNodes.keys();
             while (enumm.hasMoreElements()) {
+            	sheet.addCell(new Label( 0,lineCount,textName,font));
                 String node = (String)enumm.nextElement();
-                punchSuppLinks(sheet, lookup, node, (int[]) mSuppNodes.get(node));
+                punchSuppLinks(sheet, lookup, node, (int[][]) mSuppNodes.get(node));
             }
             
         } catch (Exception e) {
@@ -135,7 +144,7 @@ public class TransitStop {
         }
     }
 
-    void punchSuppLinks(WritableSheet sheet, Hashtable lookup, String node, int[] flows) {
+    void punchSuppLinks(WritableSheet sheet, Hashtable lookup, String node, int[][] flows) {
         // need to add time-period stuff. let's just get daily, for now.
         try {
             // search for node name
@@ -144,11 +153,17 @@ public class TransitStop {
                 textName = node;
             if (textName.equals("0")) textName="zones";
                 
-            sheet.addCell(new Label(0,lineCount,"From "+textName));
-            sheet.addCell(new Number(1,lineCount,flows[0]));
-            lineCount++;
-            sheet.addCell(new Label(0,lineCount,"To "+textName));
-            sheet.addCell(new Number(1,lineCount,flows[1]));
+			int inbound_total=0;
+			int outbound_total=0;
+            sheet.addCell(new Label(1,lineCount,textName+" access"));
+			for (int i = 0; i<PERIODS; i++) {
+            	sheet.addCell(new Number(3*i+5,lineCount,flows[0][i]));
+            	sheet.addCell(new Number(3*i+6,lineCount,flows[1][i]));
+				inbound_total += flows[0][i];
+				outbound_total += flows[1][i];
+			}
+            sheet.addCell(new Number(2,lineCount,inbound_total));
+            sheet.addCell(new Number(3,lineCount,outbound_total));
             lineCount++;
         } catch (Exception e) {
             e.printStackTrace();
@@ -168,13 +183,13 @@ public class TransitStop {
                 wcf =  new WritableCellFormat (new WritableFont(
                 		WritableFont.ARIAL, 10, WritableFont.NO_BOLD, false));
                 
-            sheet.addCell(new Label(0,lineCount,line.name,wcf));
+            sheet.addCell(new Label(1,lineCount,line.name,wcf));
 
             for (int i= 0; i<= PERIODS; i++) {
                 if (line.riders[i*2]>0)
-                    sheet.addCell(new Number(i*3+1,lineCount,line.riders[i*2],wcf));
+                    sheet.addCell(new Number(i*3+2,lineCount,line.riders[i*2],wcf));
                 if (line.riders[i*2+1]>0)
-                    sheet.addCell(new Number(i*3+2,lineCount,line.riders[i*2+1],wcf));
+                    sheet.addCell(new Number(i*3+3,lineCount,line.riders[i*2+1],wcf));
             }
             lineCount++;
         } catch (Exception e) {
