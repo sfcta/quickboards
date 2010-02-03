@@ -1,7 +1,7 @@
 /*
  * Created on Apr 15, 2004
  *
- * (c) 2004 San Francisco County Transportation Authority.
+ * (c) 2010 San Francisco County Transportation Authority.
  * 
  */
 package org.sfcta.quickboards;
@@ -20,7 +20,7 @@ import jxl.write.*;
 /**
  * @author tad
  *
- * (c) 2004 San Francisco County Transportation Authority.
+ * (c) 2010 San Francisco County Transportation Authority.
  */
 public class QuickBoards {
 

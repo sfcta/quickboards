@@ -1,7 +1,7 @@
 /*
  * Created on Apr 15, 2004
  *
- * (c) 2004 San Francisco County Transportation Authority.
+ * (c) 2010 San Francisco County Transportation Authority.
  * 
  */
 package org.sfcta.quickboards;
@@ -13,13 +13,16 @@ import jxl.write.Number;
 /**
  * @author billy
  *
- * (c) 2004 San Francisco County Transportation Authority.
+ * (c) 2010 San Francisco County Transportation Authority.
  */
 public class TransitLine implements Comparable {
 
     static int PERIODS = 5;
     static String[] label = {"AM","MD","PM","EV","EA"};
     static double[] timePeriodFactors = {1.0, 0.44, 0.18, 0.37, 0.22, 0.58}; 
+    // Hmm -- but these don't match http://intranet/Modeling/HelpfulFactors
+    // The following do:
+    // static double[] timePeriodFactors = {1.0, 0.4176, 0.1848, 0.4044, 0.2076, 0.5556}; 
     static Hashtable mNodeLookup = null;
     public static int lineCount = 0;
 
@@ -253,25 +256,26 @@ public class TransitLine implements Comparable {
             
             lineCount+=2;
             
-            sheet.addCell(new Label( 0,lineCount,"Line: "+name,font));
-            sheet.addCell(new Label( 2,lineCount,"Daily", font));            
-            sheet.addCell(new Label( 6,lineCount,"AM", font));            
-            sheet.addCell(new Label(10,lineCount,"MD", font));            
-            sheet.addCell(new Label(14,lineCount,"PM", font));            
-            sheet.addCell(new Label(18,lineCount,"EV", font));            
-            sheet.addCell(new Label(22,lineCount,"EA", font));         
+            sheet.addCell(new Label( 0,lineCount,name,font));
+            sheet.addCell(new Label( 3,lineCount,"Daily", font));            
+            sheet.addCell(new Label( 7,lineCount,"AM", font));            
+            sheet.addCell(new Label(11,lineCount,"MD", font));            
+            sheet.addCell(new Label(15,lineCount,"PM", font));            
+            sheet.addCell(new Label(19,lineCount,"EV", font));            
+            sheet.addCell(new Label(23,lineCount,"EA", font));         
 
-            sheet.addCell(new Label(0,lineCount+1,"Node", font));         
-            sheet.addCell(new Label(1,lineCount+1,"Station", font));         
+            sheet.addCell(new Label(0,lineCount+1,name, font));
+            sheet.addCell(new Label(1,lineCount+1,"Node", font));         
+            sheet.addCell(new Label(2,lineCount+1,"Station", font));         
             for (int i = 0; i<6; i++) {
-            	sheet.addCell(new Label(i*4+2,lineCount+1,"Boards", font));			
-            	sheet.addCell(new Label(i*4+3,lineCount+1,"Exits", font));			
-            	sheet.addCell(new Label(i*4+4,lineCount+1,"Volume", font));			
+            	sheet.addCell(new Label(i*4+3,lineCount+1,"Boards", font));			
+            	sheet.addCell(new Label(i*4+4,lineCount+1,"Exits", font));			
+            	sheet.addCell(new Label(i*4+5,lineCount+1,"Volume", font));			
             }         
             lineCount+=2;
 
             // And now print it all out
-            list.write(sheet);
+            list.write(sheet,name);
             
         } catch (Exception e) {
             e.printStackTrace();
@@ -295,9 +299,14 @@ public class TransitLine implements Comparable {
             sd.addVolumes(period, brd, xit, vol);
         }
 
-        void write(WritableSheet sheet) {
+        void write(WritableSheet sheet,String linename) {
             Iterator i = listOfStations.iterator();
             while (i.hasNext()) {
+                try {
+                    sheet.addCell(new Label(0,lineCount,linename));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 ((StationData)i.next()).write(sheet);
                 lineCount++;
             }
@@ -331,11 +340,11 @@ public class TransitLine implements Comparable {
                     textName = name;
                 
 
-                sheet.addCell(new Label(0,lineCount,name));
-                sheet.addCell(new Label(1,lineCount,textName));
+                sheet.addCell(new Label(1,lineCount,name));
+                sheet.addCell(new Label(2,lineCount,textName));
                 for (int i = 0; i < 18; i++) {
 //                    if (j[i]!=0)
-                        sheet.addCell(new Number((i/3)+i+2,lineCount,j[i]));
+                        sheet.addCell(new Number((i/3)+i+3,lineCount,j[i]));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
