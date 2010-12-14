@@ -96,7 +96,6 @@ public class TransitLine implements Comparable {
      * @param period
      */
     void addSummary(TransitLink link, int period) {
-
         // incr period since daily is at position 0.
         period++;
 
@@ -287,7 +286,7 @@ public class TransitLine implements Comparable {
         Hashtable staLookup = new Hashtable();
         LinkedList listOfStations = new LinkedList();
 
-        void addStation(String node, int period, long brd, long xit, long vol) {
+        void addStation(String node, int period, long brd, long xit, double vol) {
 
             StationData sd = (StationData) staLookup.get(node);
             if (null == sd) {
@@ -315,19 +314,19 @@ public class TransitLine implements Comparable {
 
     class StationData {
         String name;
-        long[] j = {0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0};
+        double[] j = {0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0};
 
         public StationData(String s) {
             name = s;
         }
 
-        void addVolumes (int period, long brd, long xit, long vol) {
-            j[0] += brd;
-            j[1] += xit;
+        void addVolumes (int period, long brd, long xit, double vol) {
+            j[0] += (double)brd;
+            j[1] += (double)xit;
             j[2] += vol;
             
-            j[3+period*3] += brd;
-            j[4+period*3] += xit;
+            j[3+period*3] += (double)brd;
+            j[4+period*3] += (double)xit;
             j[5+period*3] += vol;
         }
         void write(WritableSheet sheet) {

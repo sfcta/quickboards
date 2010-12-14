@@ -20,7 +20,7 @@ public class TransitLink {
     long time =0;
     long stopa = 0;
     long stopb = 0;
-    long vol=0;
+    double vol=0.0;
     long brda=0;
     long brdb=0;
     long xita=0;
@@ -38,7 +38,11 @@ public class TransitLink {
 
         this.mode = ((Long)fields[MODE]).longValue();
         this.dist = ((Long)fields[DIST]).longValue();
-        this.vol  = ((Long)fields[VOL]).longValue();
+        try {
+            this.vol = (double) ((Long)fields[VOL]).longValue();
+        } catch (ClassCastException e) {
+            this.vol = ((Double)fields[VOL]).doubleValue();
+        }
         this.brda = ((Long)fields[BRDA]).longValue();
         this.brdb = ((Long)fields[BRDB]).longValue();
         this.xita = ((Long)fields[XITA]).longValue();
