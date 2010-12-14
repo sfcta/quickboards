@@ -487,6 +487,14 @@ public class QuickBoards {
 		
 		try {
             WritableSheet sheet = wb.createSheet("Line Detail",2);
+            sheet.setColumnView(0, 17);
+            sheet.setColumnView(1, 6);
+            sheet.setColumnView(2, 20);
+            sheet.setColumnView(6, 2);
+            sheet.setColumnView(10, 2);
+            sheet.setColumnView(14, 2);
+            sheet.setColumnView(18, 2);
+            sheet.setColumnView(22, 2);
             WritableCellFormat font =  new WritableCellFormat (new WritableFont(
             		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
             sheet.addCell(new Label(0,0,"Line Detail Report", font));
