@@ -46,6 +46,8 @@ public class QuickBoards {
 	public 	 int XITB =  17;
     
 	public static String[] mTimePeriods = {"am","md","pm","ev","ea"};  
+	public static WritableCellFormat bold_font = new WritableCellFormat (
+			new WritableFont(WritableFont.ARIAL, 10, WritableFont.BOLD, false));
 	public Vector vPaths = new Vector();
     
     //		{"sfwlw","nswtw"};
@@ -323,13 +325,13 @@ public class QuickBoards {
                         if (null != mStationInterest.get(a)) {
                             TransitStop ts = (TransitStop) mStationInterest.get(a);
                             if (Integer.parseInt(b)<=1899) b = "0";
-                            ts.addSuppNodes(b,period,fields[VOL].toString(),false);
+                            ts.addSuppNodes(b,period,fields[VOL],false);
                         } 
 
                         if (null != mStationInterest.get(b)) {
                             TransitStop ts = (TransitStop) mStationInterest.get(b);
                             if (Integer.parseInt(a)<=1899) a = "0";
-                            ts.addSuppNodes(a,period,fields[VOL].toString(),true);
+                            ts.addSuppNodes(a,period,fields[VOL],true);
                         }
                          
                         // No other work needs to be done on a SEQ==0 record
@@ -418,6 +420,12 @@ public class QuickBoards {
     void reportStationLevelResults() {
 		try {
             WritableSheet sheet = wb.createSheet("Stations",1);
+            sheet.setColumnView(0, 17);
+            sheet.setColumnView(1, 30);
+            for (int col=2; col<=18; col++) {
+                if (col % 3 == 1) { sheet.setColumnView(col, 2); }
+                else              { sheet.setColumnView(col, 9); }
+            }           
 	        Iterator stations = mStationInterest.values().iterator();
 	        while (stations.hasNext()) {
 	            TransitStop trStop = (TransitStop) stations.next();
@@ -432,34 +440,50 @@ public class QuickBoards {
 
 		try {
             WritableSheet sheet = wb.createSheet("LineStats",0);
-            
-			WritableCellFormat font =  new WritableCellFormat (new WritableFont(
-				WritableFont.ARIAL, 10, WritableFont.BOLD, false));
-			sheet.addCell(new Label(0,0,"Transit Line Summary", font));
+            sheet.setColumnView(0, 17);
+            sheet.setColumnView(7, 2);
+            sheet.setColumnView(8, 2);
+            sheet.setColumnView(14, 2);
+            sheet.setColumnView(21, 2);
+            sheet.setColumnView(28, 2);
 
-            sheet.addCell(new Label( 1,1,"Boardings",font));
-            sheet.addCell(new Label( 9,1,"Headways",font));   // 9 instead of 8, since no daily headway exists.
-            sheet.addCell(new Label(15,1,"Passenger-Miles",font));
-            sheet.addCell(new Label(22,1,"Passenger-Hours",font));
-            sheet.addCell(new Label(29,1,"Max Load Points",font));
+            sheet.addCell(new Label(0,0,"Transit Line Summary", bold_font));
+
+            sheet.addCell(new Label( 1,1,"Boardings",bold_font));
+            sheet.addCell(new Label( 9,1,"Headways",bold_font));   // 9 instead of 8, since no daily headway exists.
+            sheet.addCell(new Label(15,1,"Passenger-Miles",bold_font));
+            sheet.addCell(new Label(22,1,"Passenger-Hours",bold_font));
+            sheet.addCell(new Label(29,1,"Max Load Points",bold_font));
             
-			sheet.addCell(new Label(0,2,"Line Name", font));
-			for (int i = 0; i<4; i++) {
-                sheet.addCell(new Label(1+7*i,2,(i==1 ? " ":"Daily"), font)); // No Daily headway label;-)              
-                sheet.addCell(new Label(2+7*i,2,"AM", font));            
-                sheet.addCell(new Label(3+7*i,2,"MD", font));            
-                sheet.addCell(new Label(4+7*i,2,"PM", font));            
-                sheet.addCell(new Label(5+7*i,2,"EV", font));            
-                sheet.addCell(new Label(6+7*i,2,"EA", font));         
-			}         
+            sheet.addCell(new Label(0,2,"Line Name", bold_font));
+            for (int i = 0; i<4; i++) {
+                sheet.addCell(new Label(1+7*i,2,(i==1 ? " ":"Daily"), bold_font)); // No Daily headway label;-)              
+                sheet.addCell(new Label(2+7*i,2,"AM", bold_font));
+                sheet.addCell(new Label(3+7*i,2,"MD", bold_font));
+                sheet.addCell(new Label(4+7*i,2,"PM", bold_font));
+                sheet.addCell(new Label(5+7*i,2,"EV", bold_font));
+                sheet.addCell(new Label(6+7*i,2,"EA", bold_font));
+                for (int j=1; j<=6; j++) {
+                    if (i==1 && j==1) { continue; }
+                    if (i==1)   { sheet.setColumnView(j+7*i, 6); } // headways
+                    else        { sheet.setColumnView(j+7*i, 9); } // others are bigger
+                }
+            }
             
 			// Max Load Point labels
-            sheet.addCell(new Label(29+0,2,"AM", font));            
-            sheet.addCell(new Label(29+3,2,"MD", font));            
-            sheet.addCell(new Label(29+6,2,"PM", font));            
-            sheet.addCell(new Label(29+9,2,"EV", font));            
-            sheet.addCell(new Label(29+12,2,"EA", font));         
-
+            sheet.addCell(new Label(29+0,2,"AM", bold_font));            
+            sheet.addCell(new Label(29+3,2,"MD", bold_font));            
+            sheet.addCell(new Label(29+6,2,"PM", bold_font));            
+            sheet.addCell(new Label(29+9,2,"EV", bold_font));            
+            sheet.addCell(new Label(29+12,2,"EA", bold_font));         
+            for (int col=29; col<=29+13; col++) {
+                if (col % 3 == 2)
+                    { sheet.setColumnView(col,20); }
+                else if (col %3 == 0)
+                    { sheet.setColumnView(col, 6); }
+                else
+                    { sheet.setColumnView(col, 2); }
+            }
             
             // Sort the lines
             Vector c = new Vector(mSummaryInterest.values());
@@ -490,14 +514,21 @@ public class QuickBoards {
             sheet.setColumnView(0, 17);
             sheet.setColumnView(1, 6);
             sheet.setColumnView(2, 20);
+            for (int col=3; col<=25; col++) {
+                if (col % 4 == 2) {
+                    sheet.setColumnView(col, 2);
+                }
+                else {
+                    sheet.setColumnView(col, 9); 
+                }
+            }
             sheet.setColumnView(6, 2);
             sheet.setColumnView(10, 2);
             sheet.setColumnView(14, 2);
             sheet.setColumnView(18, 2);
             sheet.setColumnView(22, 2);
-            WritableCellFormat font =  new WritableCellFormat (new WritableFont(
-            		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
-            sheet.addCell(new Label(0,0,"Line Detail Report", font));
+
+            sheet.addCell(new Label(0,0,"Line Detail Report", bold_font));
 
 	        while (lines.hasMoreElements()) {
 	            TransitLine trLine = (TransitLine) lines.nextElement();

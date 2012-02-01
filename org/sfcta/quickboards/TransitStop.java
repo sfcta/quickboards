@@ -9,7 +9,6 @@ package org.sfcta.quickboards;
 import java.util.*;
 
 import jxl.write.*;
-import jxl.write.Number;
 
 /**
  * @author tad
@@ -21,6 +20,11 @@ public class TransitStop {
     static int lineCount = 0;
     static String TOTAL = "TOTAL";
     static String[] label = {"AM","MD","PM","EV","EA"};
+    static WritableCellFormat nonbold_num_font =  new WritableCellFormat (
+    		new WritableFont(WritableFont.ARIAL, 10, WritableFont.NO_BOLD, false),
+    		new NumberFormat("#,##0"));
+    
+    
     Hashtable lines = new Hashtable();
     Hashtable mSuppNodes = new Hashtable();
     
@@ -36,11 +40,11 @@ public class TransitStop {
         lines.put(TOTAL,mTotalRiders);
     }
 
-    public void addSuppNodes(String node, int period, String vol, boolean inbound) {
+    public void addSuppNodes(String node, int period, Object vol, boolean inbound) {
         // Get the vector of inbound/outbound supplink flows  
-        int[][] flows = (int[][]) mSuppNodes.get(node);
+        double[][] flows = (double[][]) mSuppNodes.get(node);
         if (null == flows) {
-            flows = new int[2][PERIODS];
+            flows = new double[2][PERIODS];
             for (int i = 0; i<PERIODS; i++) {
                 flows[0][i] = 0;
                 flows[1][i] = 0;
@@ -50,11 +54,14 @@ public class TransitStop {
 
         try {
             if (inbound) 
-                flows[0][period] += Integer.parseInt(vol);
+                flows[0][period] += (double) ((Long)vol).longValue();
             else
-                flows[1][period] += Integer.parseInt(vol);
-        } catch (Exception e) {
-            e.printStackTrace();
+                flows[1][period] += (double) ((Long)vol).longValue();
+        } catch (ClassCastException e) {
+            if (inbound) 
+                flows[0][period] += ((Double)vol).doubleValue();
+            else
+                flows[1][period] += ((Double)vol).doubleValue();
         }
     }
     
@@ -67,11 +74,17 @@ public class TransitStop {
         }
 
         // Keep running total of boards/alights in 0 and 1
-        ls.riders[0]   += Long.parseLong(brds.toString());
-        ls.riders[1] += Long.parseLong(xits.toString());
-
-        ls.riders[2+2*period]   += Long.parseLong(brds.toString());
-        ls.riders[3+2*period] += Long.parseLong(xits.toString());
+        try {
+            ls.riders[0] += (double) ((Long)brds).longValue();
+            ls.riders[1] += (double) ((Long)xits).longValue();
+            ls.riders[2+2*period] += (double) ((Long)brds).longValue();
+            ls.riders[3+2*period] += (double) ((Long)xits).longValue();
+        } catch (ClassCastException e) {
+            ls.riders[0] += ((Double)brds).doubleValue();
+            ls.riders[1] += ((Double)xits).doubleValue();
+            ls.riders[2+2*period] += ((Double)brds).doubleValue();
+            ls.riders[3+2*period] += ((Double)xits).doubleValue();
+        }
 
         // And keep grand total too
         if (!line.equals(TOTAL))
@@ -136,7 +149,7 @@ public class TransitStop {
             while (enumm.hasMoreElements()) {
             	sheet.addCell(new Label( 0,lineCount,textName,font));
                 String node = (String)enumm.nextElement();
-                punchSuppLinks(sheet, lookup, node, (int[][]) mSuppNodes.get(node));
+                punchSuppLinks(sheet, lookup, node, (double[][]) mSuppNodes.get(node));
             }
             
         } catch (Exception e) {
@@ -144,7 +157,7 @@ public class TransitStop {
         }
     }
 
-    void punchSuppLinks(WritableSheet sheet, Hashtable lookup, String node, int[][] flows) {
+    void punchSuppLinks(WritableSheet sheet, Hashtable lookup, String node, double[][] flows) {
         // need to add time-period stuff. let's just get daily, for now.
         try {
             // search for node name
@@ -152,18 +165,18 @@ public class TransitStop {
             if (null == textName)
                 textName = node;
             if (textName.equals("0")) textName="zones";
-                
-			int inbound_total=0;
-			int outbound_total=0;
+
+            double inbound_total=0;
+            double outbound_total=0;
             sheet.addCell(new Label(1,lineCount,textName+" access"));
-			for (int i = 0; i<PERIODS; i++) {
-            	sheet.addCell(new Number(3*i+5,lineCount,flows[0][i]));
-            	sheet.addCell(new Number(3*i+6,lineCount,flows[1][i]));
-				inbound_total += flows[0][i];
-				outbound_total += flows[1][i];
-			}
-            sheet.addCell(new Number(2,lineCount,inbound_total));
-            sheet.addCell(new Number(3,lineCount,outbound_total));
+            for (int i = 0; i<PERIODS; i++) {
+                sheet.addCell(new jxl.write.Number(3*i+5,lineCount,flows[0][i],nonbold_num_font));
+                sheet.addCell(new jxl.write.Number(3*i+6,lineCount,flows[1][i],nonbold_num_font));
+                inbound_total += flows[0][i];
+                outbound_total += flows[1][i];
+            }
+            sheet.addCell(new jxl.write.Number(2,lineCount,inbound_total,nonbold_num_font));
+            sheet.addCell(new jxl.write.Number(3,lineCount,outbound_total,nonbold_num_font));
             lineCount++;
         } catch (Exception e) {
             e.printStackTrace();
@@ -177,19 +190,19 @@ public class TransitStop {
             WritableCellFormat wcf = null;
 
             if (useBold)
-                wcf =  new WritableCellFormat (new WritableFont(
-            		WritableFont.ARIAL, 10, WritableFont.BOLD, false));
+                wcf =  new WritableCellFormat (
+                        new WritableFont(WritableFont.ARIAL, 10, WritableFont.BOLD, false),
+                        new NumberFormat("#,##0"));
             else
-                wcf =  new WritableCellFormat (new WritableFont(
-                		WritableFont.ARIAL, 10, WritableFont.NO_BOLD, false));
+                wcf = nonbold_num_font;
                 
             sheet.addCell(new Label(1,lineCount,line.name,wcf));
 
             for (int i= 0; i<= PERIODS; i++) {
                 if (line.riders[i*2]>0)
-                    sheet.addCell(new Number(i*3+2,lineCount,line.riders[i*2],wcf));
+                    sheet.addCell(new jxl.write.Number(i*3+2,lineCount,line.riders[i*2],wcf));
                 if (line.riders[i*2+1]>0)
-                    sheet.addCell(new Number(i*3+3,lineCount,line.riders[i*2+1],wcf));
+                    sheet.addCell(new jxl.write.Number(i*3+3,lineCount,line.riders[i*2+1],wcf));
             }
             lineCount++;
         } catch (Exception e) {
@@ -201,7 +214,7 @@ public class TransitStop {
 	class LineStop implements Comparable {
 	    Vector nameChunks = null;
 	    public String name;
-	    public long riders[] = {0,0,0,0,0,0,0,0,0,0,0,0}; // Two for each time period and two for daily.
+	    public double riders[] = {0,0,0,0,0,0,0,0,0,0,0,0}; // Two for each time period and two for daily.
 	
 	    public LineStop(String name) {
 	        this.name = name;

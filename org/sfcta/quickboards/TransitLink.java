@@ -21,10 +21,10 @@ public class TransitLink {
     long stopa = 0;
     long stopb = 0;
     double vol=0.0;
-    long brda=0;
-    long brdb=0;
-    long xita=0;
-    long xitb=0;
+    double brda=0;
+    double brdb=0;
+    double xita=0;
+    double xitb=0;
     double freq=0.0;
     
     Long seq;
@@ -39,14 +39,19 @@ public class TransitLink {
         this.mode = ((Long)fields[MODE]).longValue();
         this.dist = ((Long)fields[DIST]).longValue();
         try {
-            this.vol = (double) ((Long)fields[VOL]).longValue();
+            this.vol =  (double) ((Long)fields[VOL]).longValue();
+            this.brda = (double) ((Long)fields[BRDA]).longValue();
+            this.brdb = (double) ((Long)fields[BRDB]).longValue();
+            this.xita = (double) ((Long)fields[XITA]).longValue();
+            this.xitb = (double) ((Long)fields[XITB]).longValue();            
         } catch (ClassCastException e) {
-            this.vol = ((Double)fields[VOL]).doubleValue();
+            this.vol =  ((Double)fields[VOL]).doubleValue();
+            this.brda = ((Double)fields[BRDA]).doubleValue();
+            this.brdb = ((Double)fields[BRDB]).doubleValue();
+            this.xita = ((Double)fields[XITA]).doubleValue();
+            this.xitb = ((Double)fields[XITB]).doubleValue(); 
         }
-        this.brda = ((Long)fields[BRDA]).longValue();
-        this.brdb = ((Long)fields[BRDB]).longValue();
-        this.xita = ((Long)fields[XITA]).longValue();
-        this.xitb = ((Long)fields[XITB]).longValue();
+
         this.stopa= ((Long)fields[STOP_A]).longValue();
         this.stopb= ((Long)fields[STOP_B]).longValue();
         this.time = ((Long)fields[TIME]).longValue();

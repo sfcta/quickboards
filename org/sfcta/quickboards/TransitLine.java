@@ -8,7 +8,6 @@ package org.sfcta.quickboards;
 import java.util.*;
 
 import jxl.write.*;
-import jxl.write.Number;
 
 /**
  * @author billy
@@ -25,7 +24,10 @@ public class TransitLine implements Comparable {
     // static double[] timePeriodFactors = {1.0, 0.4176, 0.1848, 0.4044, 0.2076, 0.5556}; 
     static Hashtable mNodeLookup = null;
     public static int lineCount = 0;
-
+    static WritableCellFormat nonbold_num_font =  new WritableCellFormat (
+    		new WritableFont(WritableFont.ARIAL, 10, WritableFont.NO_BOLD, false),
+    		new NumberFormat("#,##0"));
+    
     String name = "";
     Vector nameChunks = null;
 
@@ -125,20 +127,20 @@ public class TransitLine implements Comparable {
             
             for (int i = 0; i<=PERIODS; i++) {
                 if (mBoards[i]>0)
-                    sheet.addCell(new Number(1+i,2+lineCount,mBoards[i]));
+                    sheet.addCell(new jxl.write.Number(1+i,2+lineCount,mBoards[i],nonbold_num_font));
                 if (mHeadway[i] >0 )
-                    sheet.addCell(new Number(8+i,2+lineCount,(float)(mHeadway[i])));
+                    sheet.addCell(new jxl.write.Number(8+i,2+lineCount,(float)(mHeadway[i]),nonbold_num_font));
                 if (mPassMiles[i]>1)
-                    sheet.addCell(new Number(15+i,2+lineCount,(int)(0.5+mPassMiles[i])));
+                    sheet.addCell(new jxl.write.Number(15+i,2+lineCount,mPassMiles[i],nonbold_num_font));
                 if (mPassHours[i]>1)
-                    sheet.addCell(new Number(22+i,2+lineCount,(int)(0.5+mPassHours[i])));
+                    sheet.addCell(new jxl.write.Number(22+i,2+lineCount,mPassHours[i],nonbold_num_font));
                 
                 // Max Load Point summary (skip daily):                    
                 if (i>0) {
                     if (mMaxLoad[i]>0) {
                         String textName = (String) lookup.get(Long.toString(mMaxLoadPoint[i]));
                         sheet.addCell(new Label (26+i*3,2+lineCount,textName));                        
-                        sheet.addCell(new Number(27+i*3,2+lineCount,(int)(0.5+mMaxLoad[i]*timePeriodFactors[i])));
+                        sheet.addCell(new jxl.write.Number(27+i*3,2+lineCount,mMaxLoad[i]*timePeriodFactors[i],nonbold_num_font));
                     }
                 }
             }
@@ -286,7 +288,7 @@ public class TransitLine implements Comparable {
         Hashtable staLookup = new Hashtable();
         LinkedList listOfStations = new LinkedList();
 
-        void addStation(String node, int period, long brd, long xit, double vol) {
+        void addStation(String node, int period, double brd, double xit, double vol) {
 
             StationData sd = (StationData) staLookup.get(node);
             if (null == sd) {
@@ -320,13 +322,13 @@ public class TransitLine implements Comparable {
             name = s;
         }
 
-        void addVolumes (int period, long brd, long xit, double vol) {
-            j[0] += (double)brd;
-            j[1] += (double)xit;
+        void addVolumes (int period, double brd, double xit, double vol) {
+            j[0] += brd;
+            j[1] += xit;
             j[2] += vol;
             
-            j[3+period*3] += (double)brd;
-            j[4+period*3] += (double)xit;
+            j[3+period*3] += brd;
+            j[4+period*3] += xit;
             j[5+period*3] += vol;
         }
         void write(WritableSheet sheet) {
@@ -343,7 +345,7 @@ public class TransitLine implements Comparable {
                 sheet.addCell(new Label(2,lineCount,textName));
                 for (int i = 0; i < 18; i++) {
 //                    if (j[i]!=0)
-                        sheet.addCell(new Number((i/3)+i+3,lineCount,j[i]));
+                        sheet.addCell(new jxl.write.Number((i/3)+i+3,lineCount,j[i],nonbold_num_font));
                 }
             } catch (Exception e) {
                 e.printStackTrace();
