@@ -39,8 +39,8 @@ public class TransitLink {
     long mode = 0;
     String a = "";
     String b = "";
-    long dist = 0;
-    long time =0;
+    double dist = 0;
+    double time =0;
     long stopa = 0;
     long stopb = 0;
     double vol=0.0;
@@ -60,7 +60,13 @@ public class TransitLink {
         this.b = fields[B].toString();
 
         this.mode = ((Long)fields[MODE]).longValue();
-        this.dist = ((Long)fields[DIST]).longValue();
+        try {
+        	this.dist = (double) ((Long)fields[DIST]).longValue();
+        	this.time = (double) ((Long)fields[TIME]).longValue();
+        } catch (ClassCastException e) {
+        	this.dist = ((Double)fields[DIST]).doubleValue();
+        	this.time = ((Double)fields[TIME]).doubleValue();         	
+        }
         try {
             this.vol =  (double) ((Long)fields[VOL]).longValue();
             this.brda = (double) ((Long)fields[BRDA]).longValue();
@@ -77,7 +83,6 @@ public class TransitLink {
 
         this.stopa= ((Long)fields[STOP_A]).longValue();
         this.stopb= ((Long)fields[STOP_B]).longValue();
-        this.time = ((Long)fields[TIME]).longValue();
         this.freq = ((Double)fields[FREQ]).doubleValue();
 
         this.seq = ((Long)fields[SEQ]);
