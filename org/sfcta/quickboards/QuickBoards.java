@@ -249,20 +249,37 @@ public class QuickBoards {
         B =      getPosition(table, "B");
         TIME =   getPosition(table, "TIME");
         MODE =   getPosition(table, "MODE");
+        DIST =   getPosition(table, "DIST");
+        NAME =   getPosition(table, "NAME");
+		
+        VOL =    getPosition(table, "AB_VOL");		
         FREQ =   getPosition(table, "FREQ");
         PLOT =   getPosition(table, "PLOT");
         COLOR =  getPosition(table, "COLOR");
         STOP_A = getPosition(table, "STOP_A");
         STOP_B = getPosition(table, "STOP_B");
-        DIST =   getPosition(table, "DIST");
-        NAME =   getPosition(table, "NAME");
         SEQ =    getPosition(table, "SEQ");
         OWNER =  getPosition(table, "OWNER");
-        VOL =    getPosition(table, "AB_VOL");
         BRDA =   getPosition(table, "AB_BRDA");
         XITA =   getPosition(table, "AB_XITA");
         BRDB =   getPosition(table, "AB_BRDB");
         XITB =   getPosition(table, "AB_XITB");
+		
+		//IF FREQ is -1 then try reading the file in the "Cube Public Transport" type output format
+        if(FREQ==-1){   
+			VOL =    getPosition(table, "VOL");
+	        PLOT =   getPosition(table, "OPERATOR");
+	        COLOR =  getPosition(table, "OPERATOR");
+	        STOP_A = getPosition(table, "STOPA");
+	        STOP_B = getPosition(table, "STOPB");
+	        SEQ =    getPosition(table, "LINKSEQ");
+	        OWNER =  getPosition(table, "OPERATOR");
+	        BRDA =   getPosition(table, "ONA");
+	        XITA =   getPosition(table, "OFFA");
+	        BRDB =   getPosition(table, "ONB");
+	        XITB =   getPosition(table, "OFFB");
+			FREQ =   getPositionHeadway(table);
+        }
     }
 
 
@@ -283,7 +300,21 @@ public class QuickBoards {
      
         return i;
     }
-    
+	
+    /** 
+     * Find the DBF field for Headway.
+     * @param fields The table of fields and their positions
+     * @return Field position in the array
+     */
+    int  getPositionHeadway (Hashtable fields) {
+		Enumeration e = fields.keys();
+		while (e.hasMoreElements()){		
+			String tempStr = (String) e.nextElement();
+			if(tempStr.substring(0,Math.min(tempStr.length(),7)).equalsIgnoreCase("Headway"))
+				return getPosition(fields, tempStr);
+		}
+		return -1;
+    }    
     /**
      * MAIN LOOP! ---------------------------------------
      * Read the required DBF files and populate the data vectors.
